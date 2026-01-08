@@ -70,3 +70,47 @@ CREATE TABLE chat."user" (
 	CONSTRAINT user_unique_1 UNIQUE (email),
 	CONSTRAINT user_unique_2 UNIQUE (phone_number)
 );
+
+
+-- chat.chats_members definition
+
+-- Drop table
+
+-- DROP TABLE chat.chats_members;
+
+CREATE TABLE chat.chats_members (
+	chat_id int4 NOT NULL,
+	user_id int4 NOT NULL,
+	"role" varchar(25) DEFAULT 'default'::character varying NOT NULL,
+	deleted bool NULL,
+	delete_reason varchar(128) NULL,
+	restricted bool NULL,
+	retstrict_reason varchar(128) NULL,
+	CONSTRAINT chats_members_pk PRIMARY KEY (chat_id, user_id),
+	CONSTRAINT chats_members_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chat(id),
+	CONSTRAINT chats_members_user_fk FOREIGN KEY (user_id) REFERENCES chat."user"(id)
+);
+CREATE INDEX chats_members_user_id_idx ON chat.chats_members USING btree (user_id);
+
+
+-- chat.contacts definition
+
+-- Drop table
+
+-- DROP TABLE chat.contacts;
+
+CREATE TABLE chat.contacts (
+	id int4 NOT NULL,
+	owner_id int4 NOT NULL,
+	phone_number varchar(25) NULL,
+	email varchar(35) NOT NULL,
+	first_name varchar(128) NOT NULL,
+	last_name varchar(128) NULL,
+	user_id int4 NOT NULL,
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT contacts_pk PRIMARY KEY (id),
+	CONSTRAINT contacts_unique UNIQUE (owner_id),
+	CONSTRAINT contacts_user_fk FOREIGN KEY (owner_id) REFERENCES chat."user"(id),
+	CONSTRAINT contacts_user_fk_1 FOREIGN KEY (user_id) REFERENCES chat."user"(id)
+);
+CREATE INDEX contacts_user_id_idx ON chat.contacts USING btree (user_id);
