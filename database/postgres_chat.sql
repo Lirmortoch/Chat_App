@@ -111,7 +111,7 @@ CREATE TABLE chat.contacts (
 	CONSTRAINT contacts_pk PRIMARY KEY (id),
 	CONSTRAINT contacts_unique UNIQUE (owner_id),
 	CONSTRAINT contacts_user_fk FOREIGN KEY (owner_id) REFERENCES chat."user"(id),
-	CONSTRAINT contacts_user_fk_1 FOREIGN KEY (user_id) REFERENCES chat."user"(id)
+	CONSTRAINT contacts_user_fk_1 FOREIGN KEY (user_id) REFERENCES chat."user"(id) ON DELETE CASCADE
 );
 CREATE INDEX contacts_user_id_idx ON chat.contacts USING btree (user_id);
 
@@ -130,8 +130,8 @@ CREATE TABLE chat.messages (
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	edited_at timestamp NULL,
 	CONSTRAINT messages_pk PRIMARY KEY (id),
-	CONSTRAINT messages_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chat(id),
-	CONSTRAINT messages_user_fk FOREIGN KEY (sender_id) REFERENCES chat."user"(id)
+	CONSTRAINT messages_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chat(id) ON DELETE CASCADE,
+	CONSTRAINT messages_user_fk FOREIGN KEY (sender_id) REFERENCES chat."user"(id) ON DELETE SET NULL
 );
 CREATE INDEX messages_chat_id_idx ON chat.messages USING btree (chat_id, created_at);
 CREATE INDEX messages_sender_id_idx ON chat.messages USING btree (sender_id);
@@ -192,6 +192,6 @@ CREATE TABLE chat.additional (
 	CONSTRAINT additional_pk PRIMARY KEY (id),
 	CONSTRAINT additional_unique UNIQUE (file_type),
 	CONSTRAINT additional_unique_1 UNIQUE (file_url),
-	CONSTRAINT additional_messages_fk FOREIGN KEY (message_id) REFERENCES chat.messages(id)
+	CONSTRAINT additional_messages_fk FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE
 );
 CREATE INDEX additional_message_id_idx ON chat.additional USING btree (message_id);
