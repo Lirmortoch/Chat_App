@@ -1,0 +1,32 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "backend for chat application",
+  "keywords": [
+    "backend",
+    "node",
+    "express.js",
+    "chat",
+    "application"
+  ],
+  "license": "GPL-3.0",
+  "author": "Lirmortoch",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "cross-env NODE_ENV=production node index.js",
+    "dev": "cross-env NODE_ENV=development node --watch index.js",
+    "test": "cross-env NODE_ENV=test node --test",
+    "lint": "eslint .",
+    "start:test": "cross-env NODE_ENV=test node --watch index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}
