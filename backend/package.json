@@ -24,7 +24,8 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
-    "postgres": "^3.4.8"
+    "postgres": "^3.4.8",
+    "bcrypt": "^6.0.0"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

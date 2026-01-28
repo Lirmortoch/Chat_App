@@ -8,5 +8,4 @@ const app = express();
 
 app.use(helmet());
 
-
-
+module.exports = app;
