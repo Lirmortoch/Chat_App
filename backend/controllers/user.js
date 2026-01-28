@@ -5,7 +5,7 @@ const postgreSql = require('../db.js');
 
 UserRouter.get('/', async (request, response) => {
   const users = await postgreSql`
-    SELECT id, email, name
+    SELECT public_id, email, name
     FROM users
   `;
 
@@ -18,7 +18,7 @@ UserRouter.get('/', async (request, response) => {
 
 UserRouter.get('/:id', async (request, response) => {
   const [ user ] = await postgreSql`
-    SELECT * FROM users WHERE id = ${request.params.id}
+    SELECT * FROM users WHERE public_id = ${request.params['public_id']}
   `;
 
   if (!user) {
@@ -28,7 +28,7 @@ UserRouter.get('/:id', async (request, response) => {
   response.json(user);
 });
 
-UserRouter.post('/:id', async (request, response) => {
+UserRouter.post('/', async (request, response) => {
   const { name, username, password, email, phoneNumber, role } = request.params;
   const saltRounds = 25;
   const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -54,7 +54,7 @@ UserRouter.post('/:id', async (request, response) => {
       now(),
       false,
       false,
-      'user'
+      ${role}
   `;
 
   if (!user) {
