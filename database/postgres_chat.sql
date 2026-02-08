@@ -41,9 +41,12 @@ CREATE TABLE chat.chat (
 	"name" varchar(45) NOT NULL,
 	url text NOT NULL,
 	"type" varchar(25) NOT NULL,
+	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT chat_pk PRIMARY KEY (id),
-	CONSTRAINT chat_unique UNIQUE (url)
+	CONSTRAINT chat_unique_1 UNIQUE (public_id),
+	CONSTRAINT chat_url UNIQUE (url)
 );
+CREATE UNIQUE INDEX chat_public_id_idx ON chat.chat USING btree (public_id);
 
 
 -- chat.users definition
@@ -66,7 +69,7 @@ CREATE TABLE chat.users (
 	restrict_reason varchar(128) NULL,
 	"role" varchar(25) DEFAULT 'default'::character varying NOT NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
-	CONSTRAINT user_pk PRIMARY KEY (id),
+	CONSTRAINT user_pk_idx PRIMARY KEY (id),
 	CONSTRAINT user_unique UNIQUE (username),
 	CONSTRAINT user_unique_1 UNIQUE (email),
 	CONSTRAINT user_unique_2 UNIQUE (phone_number),
@@ -110,11 +113,14 @@ CREATE TABLE chat.contacts (
 	last_name varchar(128) NULL,
 	user_id int4 NOT NULL,
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT contacts_pk PRIMARY KEY (id),
 	CONSTRAINT contacts_unique UNIQUE (owner_id),
+	CONSTRAINT contacts_unique_1 UNIQUE (public_id),
 	CONSTRAINT contacts_user_fk FOREIGN KEY (owner_id) REFERENCES chat.users(id),
 	CONSTRAINT contacts_user_fk_1 FOREIGN KEY (user_id) REFERENCES chat.users(id) ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX contacts_public_id_idx ON chat.contacts USING btree (public_id);
 CREATE INDEX contacts_user_id_idx ON chat.contacts USING btree (user_id);
 
 
@@ -131,11 +137,14 @@ CREATE TABLE chat.messages (
 	message text NULL,
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	edited_at timestamp NULL,
+	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT messages_pk PRIMARY KEY (id),
+	CONSTRAINT messages_unique UNIQUE (public_id),
 	CONSTRAINT messages_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chat(id) ON DELETE CASCADE,
 	CONSTRAINT messages_user_fk FOREIGN KEY (sender_id) REFERENCES chat.users(id) ON DELETE SET NULL
 );
 CREATE INDEX messages_chat_id_idx ON chat.messages USING btree (chat_id, created_at);
+CREATE UNIQUE INDEX messages_public_id_idx ON chat.messages USING btree (public_id);
 CREATE INDEX messages_sender_id_idx ON chat.messages USING btree (sender_id);
 
 
