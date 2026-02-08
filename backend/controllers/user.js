@@ -83,7 +83,21 @@ UserRouter.post('/', async (request, response) => {
 });
 
 UserRouter.put('/:public_id', async (request, response) => {
-  
+  try {
+    const { field, fieldData } = request.body
+
+    const updatedUser = await postgreSql`
+      UPDATE users
+      SET ${field} = ${fieldData}
+      WHERE public_id = ${request.params['public_id']}
+    `;
+
+    response.status(204).end()
+  }
+  catch(error) {
+    console.log(error);
+    response.status(500).json({ message: `Internal server error` })
+  }
 })
 
 UserRouter.delete('/:public_id', async (request, response) => {
