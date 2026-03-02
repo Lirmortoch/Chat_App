@@ -16,9 +16,9 @@ async function seed() {
     ============================================================ */
     await postgreSql`
       TRUNCATE TABLE 
-        chat.additional, chat.user_profile_photos, chat.messages, 
+        chat.additionals, chat.user_profile_photos, chat.messages, 
         chat.chats_members, chat.contacts, chat.sessions, 
-        chat.chat, chat.users 
+        chat.chats, chat.users 
       RESTART IDENTITY CASCADE
     `
 
@@ -40,7 +40,7 @@ async function seed() {
     ============================================================ */
     console.log('💬 Creating chats...')
     const chats = await postgreSql`
-      INSERT INTO chat.chat (name, url, type)
+      INSERT INTO chat.chats (name, url, type)
       SELECT 
         CASE WHEN gs % 3 = 0 THEN 'Project Group ' || gs ELSE 'Private Chat ' || gs END,
         CASE WHEN gs % 3 = 0 THEN 'group_url_' || gs ELSE NULL END,
@@ -111,7 +111,7 @@ async function seed() {
         message_id: messages[Math.floor(Math.random() * messages.length)].id
       }
     })
-    await postgreSql`INSERT INTO chat.additional ${postgreSql(attachmentEntries, 'file_type', 'file_url', 'message_id')}`
+    await postgreSql`INSERT INTO chat.additionals ${postgreSql(attachmentEntries, 'file_type', 'file_url', 'message_id')}`
 
     /* ============================================================
        7. CONTACTS (PREVENTING SELF-ADDITION)
