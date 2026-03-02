@@ -1,11 +1,11 @@
 const bcrypt = require('bcrypt');
-const UserRouter = require('express').Router();
+const UsersRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
 
 const config = require('../utils/config.js');
 
-UserRouter.get('/', async (request, response) => {
+UsersRouter.get('/', async (request, response) => {
   try {
     const users = await postgreSql`
     SELECT public_id, email, name
@@ -19,7 +19,7 @@ UserRouter.get('/', async (request, response) => {
     response.status(500).json({ message: 'Internal server error' })
   }
 });
-UserRouter.get('/:public_id', async (request, response) => {
+UsersRouter.get('/:public_id', async (request, response) => {
   try {
     const [ user ] = await postgreSql`
       SELECT * FROM users WHERE public_id = ${request.params['public_id']}
@@ -37,7 +37,7 @@ UserRouter.get('/:public_id', async (request, response) => {
   }
 });
 
-UserRouter.post('/', async (request, response) => {
+UsersRouter.post('/', async (request, response) => {
   try {
     const { name, username, password, email, phoneNumber, role } = request.body;
 
@@ -82,17 +82,18 @@ UserRouter.post('/', async (request, response) => {
   }
 });
 
-UserRouter.put('/:public_id', async (request, response) => {
+UsersRouter.put('/:public_id', async (request, response) => {
   try {
-    const { field, fieldData } = request.body
+    const { field, fieldData } = request.body;
 
     const updatedUser = await postgreSql`
       UPDATE users
       SET ${field} = ${fieldData}
       WHERE public_id = ${request.params['public_id']}
+      RETURNING public_id
     `;
 
-    response.status(204).end()
+    response.status(201).json(updatedUser);
   }
   catch(error) {
     console.log(error);
@@ -100,7 +101,7 @@ UserRouter.put('/:public_id', async (request, response) => {
   }
 })
 
-UserRouter.delete('/:public_id', async (request, response) => {
+UsersRouter.delete('/:public_id', async (request, response) => {
   try {
     const deletedUser = await postgreSql`
       DELETE from users 
@@ -112,7 +113,7 @@ UserRouter.delete('/:public_id', async (request, response) => {
       return response.status(404).json({ message: 'User not found' });
     }
 
-    response.status(204).end();
+    response.status(201).json(deletedUser);
   }
   catch(error) {
     console.log(error);
@@ -120,4 +121,4 @@ UserRouter.delete('/:public_id', async (request, response) => {
   }
 });
 
-module.exports = UserRouter;
+module.exports = UsersRouter;
