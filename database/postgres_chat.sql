@@ -62,9 +62,10 @@ CREATE TABLE chat.chats_members (
 	deleted bool NULL,
 	delete_reason varchar(128) NULL,
 	restricted bool NULL,
-	retstrict_reason varchar(128) NULL,
+	restrict_reason varchar(128) NULL,
+	last_readed_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	CONSTRAINT chats_members_pk PRIMARY KEY (chat_id, user_id),
-	CONSTRAINT chats_members_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chat(id),
+	CONSTRAINT chats_members_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id),
 	CONSTRAINT chats_members_user_fk FOREIGN KEY (user_id) REFERENCES chat.users(id)
 );
 CREATE INDEX chats_members_user_id_idx ON chat.chats_members USING btree (user_id);

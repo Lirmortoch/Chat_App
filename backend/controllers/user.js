@@ -104,7 +104,7 @@ UsersRouter.put('/:public_id', async (request, response) => {
 UsersRouter.delete('/:public_id', async (request, response) => {
   try {
     const deletedUser = await postgreSql`
-      DELETE from users 
+      DELETE CASCADE from users 
       WHERE public_id = ${request.params['public_id']}
       RETURNING public_id
     `;
