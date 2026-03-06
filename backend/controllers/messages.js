@@ -17,7 +17,7 @@ MessagesRouter.get('/', async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 });
-MessagesRouter.get('/:message_public_id', async (request, response) => {
+MessagesRouter.get('/message/:message_public_id', async (request, response) => {
   try {
     const [ message ] = await postgreSql`
       SELECT * FROM messages
@@ -116,7 +116,7 @@ MessagesRouter.get('/:chat_public_id', async (request, response) => {
 
 MessagesRouter.post('/', async (request, response) => {
   try {
-    const { message } = request.body;
+    const { message, additionals } = request.body;
 
     const insertedMessage = await postgreSql`
       INSERT INTO messages (
@@ -158,15 +158,28 @@ MessagesRouter.put('/:public_id', async (request, response) => {
   }
 });
 
-MessagesRouter.delete('/:public_id', async (request, response) => {
+MessagesRouter.delete('/message/:public_id', async (request, response) => {
   try {
-    const deletedMessage = await postgreSql`
+    const [ deletedMessage ] = await postgreSql`
       DELETE CASCADE from messages
       WHERE public_id = ${request.params.public_id}
       RETURNING *
     `;
 
     response.status(201).json(deletedMessage);
+  }
+  catch(error) {
+    console.log(error);
+    response.status(500).json({ message: 'Internal server error' });
+  }
+});
+MessagesRouter.delete('/messages/:chat_public_id', async (request, response) => {
+  try {
+    const deletedMessages = await postgreSql`
+      DELETE CASCADE messages
+      JOIN chat.chats WHERE chats.public_id = ${request.params.chat_public_id}
+      RETURNING *
+    `;
   }
   catch(error) {
     console.log(error);
