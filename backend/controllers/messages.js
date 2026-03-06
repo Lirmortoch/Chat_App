@@ -1,9 +1,9 @@
-const MessagesRouter = require('express').Router();
+const MessagesRouter = require("express").Router();
 
-const postgreSql = require('../db.js');
+const postgreSql = require("../db.js");
 // const config = require('../utils/config.js');
 
-MessagesRouter.get('/', async (request, response) => {
+MessagesRouter.get("/", async (request, response) => {
   try {
     const messages = await postgreSql`
       SELECT public_id, message
@@ -11,31 +11,29 @@ MessagesRouter.get('/', async (request, response) => {
     `;
 
     response.json(messages);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
-MessagesRouter.get('/message/:message_public_id', async (request, response) => {
+MessagesRouter.get("/message/:message_public_id", async (request, response) => {
   try {
-    const [ message ] = await postgreSql`
+    const [message] = await postgreSql`
       SELECT * FROM messages
       WHERE public_id = ${request.params.message_public_id}
     `;
 
     if (!message) {
-      response.status(404).json({ message: 'Message not found' });
+      response.status(404).json({ message: "Message not found" });
     }
 
     response.json(message);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
-MessagesRouter.get('/:user_public_id', async (request, response) => {
+MessagesRouter.get("/:user_public_id", async (request, response) => {
   try {
     const messages = await postgreSql`
       WITH user_data AS (
@@ -76,45 +74,61 @@ MessagesRouter.get('/:user_public_id', async (request, response) => {
     `;
 
     if (!messages) {
-      response.status(404).json({ message: 'Message not found' });
+      response.status(404).json({ message: "Message not found" });
     }
 
     response.json(messages);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
-MessagesRouter.get('/:chat_public_id', async (request, response) => {
+MessagesRouter.get("/:chat_public_id", async (request, response) => {
   try {
     const { chat_public_id } = request.params;
     const user_public_id = request.user.public_id;
 
     const messages = await postgreSql`
       WITH updated_member AS (
-        UPDATE chat.chats_members
-        SET last_read_at = CURRENT_TIMESTAMP
-        WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${user_public_id})
-          AND chat_id = (SELECT id FROM chat.chats WHERE public_id = ${chat_public_id})
-        RETURNING chat_id
-      )
-      SELECT 
-        m.public_id, m.message, m.created_at,
-        u.public_id AS sender_id, u.name AS sender_name
-      FROM chat.messages m
-      JOIN chat.users u ON m.sender_id = u.id
-      WHERE m.chat_id = (SELECT chat_id FROM updated_member)
-      ORDER BY m.created_at ASC;
+    -- 1. Обнуляем счетчик непрочитанных
+    UPDATE chat.chats_members
+    SET last_read_at = CURRENT_TIMESTAMP
+    WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${user_public_id})
+      AND chat_id = (SELECT id FROM chat.chats WHERE public_id = ${chat_public_id})
+    RETURNING chat_id
+)
+-- 2. Собираем сообщение, автора и массив файлов
+SELECT 
+    m.public_id AS message_id,
+    m.message,
+    m.created_at,
+    u.public_id AS sender_id,
+    u.name AS sender_name,
+    -- Магия JSON: собираем все вложения в массив объектов
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'url', a.file_url,
+                'type', a.file_type
+            )
+        ) 
+        FROM chat.additionals a 
+        WHERE a.message_id = m.id), 
+        '[]'
+    ) AS attachments
+FROM chat.messages m
+JOIN chat.users u ON m.sender_id = u.id
+WHERE m.chat_id = (SELECT chat_id FROM updated_member)
+ORDER BY m.created_at ASC;
     `;
 
     response.json(messages);
   } catch (error) {
-    response.status(500).json({ error: 'Failed to fetch messages' });
+    response.status(500).json({ error: "Failed to fetch messages" });
   }
 });
 
-MessagesRouter.post('/', async (request, response) => {
+MessagesRouter.post("/", async (request, response) => {
   try {
     const { message, additionals } = request.body;
 
@@ -131,14 +145,13 @@ MessagesRouter.post('/', async (request, response) => {
     `;
 
     response.status(201).json(insertedMessage);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
 
-MessagesRouter.put('/:public_id', async (request, response) => {
+MessagesRouter.put("/:public_id", async (request, response) => {
   try {
     const { fieldData } = request.body;
 
@@ -151,38 +164,38 @@ MessagesRouter.put('/:public_id', async (request, response) => {
     `;
 
     response.status(201).json(updatedMessage);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
 
-MessagesRouter.delete('/message/:public_id', async (request, response) => {
+MessagesRouter.delete("/message/:public_id", async (request, response) => {
   try {
-    const [ deletedMessage ] = await postgreSql`
+    const [deletedMessage] = await postgreSql`
       DELETE CASCADE from messages
       WHERE public_id = ${request.params.public_id}
       RETURNING *
     `;
 
     response.status(201).json(deletedMessage);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
-MessagesRouter.delete('/messages/:chat_public_id', async (request, response) => {
-  try {
-    const deletedMessages = await postgreSql`
+MessagesRouter.delete(
+  "/messages/:chat_public_id",
+  async (request, response) => {
+    try {
+      const deletedMessages = await postgreSql`
       DELETE CASCADE messages
       JOIN chat.chats WHERE chats.public_id = ${request.params.chat_public_id}
       RETURNING *
     `;
-  }
-  catch(error) {
-    console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
-  }
-});
+    } catch (error) {
+      console.log(error);
+      response.status(500).json({ message: "Internal server error" });
+    }
+  },
+);

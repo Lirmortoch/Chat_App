@@ -1,8 +1,8 @@
-const express = require('express');
-const helmet = require('helmet');
+const express = require("express");
+const helmet = require("helmet");
 
-const config = require('./utils/config');
-const logger = require('./utils/logger');
+const config = require("./utils/config");
+const logger = require("./utils/logger");
 
 const app = express();
 

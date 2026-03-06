@@ -1,40 +1,38 @@
-const ChatsRouter = require('express').Router();
+const ChatsRouter = require("express").Router();
 
-const postgreSql = require('../db.js');
+const postgreSql = require("../db.js");
 // const config = require('../utils/config.js');
 
-ChatsRouter.get('/', async (request, response) => {
+ChatsRouter.get("/", async (request, response) => {
   try {
     const chats = await postgreSql`
       SELECT * FROM chats
     `;
 
     response.json(chats);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
-ChatsRouter.get('/:chat_public_id', async (request, response) => {
+ChatsRouter.get("/:chat_public_id", async (request, response) => {
   try {
-    const [ chat ] = await postgreSql`
+    const [chat] = await postgreSql`
       SELECT * FROM chats
       WHERE public_id = ${request.params.chat_public_id}
     `;
 
     if (!chat) {
-      response.status(404).json({ message: 'Message not found' });
+      response.status(404).json({ message: "Message not found" });
     }
 
     response.json(chat);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
-ChatsRouter.get('/:public_user_id', async (request, response) => {
+ChatsRouter.get("/:public_user_id", async (request, response) => {
   try {
     const chats = await postgreSql`
     WITH user_info AS (
@@ -72,29 +70,27 @@ ChatsRouter.get('/:public_user_id', async (request, response) => {
     `;
 
     response.json(chats);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
 
-ChatsRouter.post('/', async (request, response) => {
+ChatsRouter.post("/", async (request, response) => {
   try {
     const { recipient_public_id, type, name } = request.body;
     const creator_id = request.user.id;
 
     const newChat = await postgreSql.begin(async (sql) => {
-
       const [recipient] = await sql`
         SELECT id FROM chat.users WHERE public_id = ${recipient_public_id}
       `;
 
       if (!recipient) {
-        throw new Error('User not found');
+        throw new Error("User not found");
       }
 
-      if (type === 'private') {
+      if (type === "private") {
         const [existingChat] = await sql`
           SELECT c.public_id, c.name, c.type
           FROM chat.chats c
@@ -113,7 +109,7 @@ ChatsRouter.post('/', async (request, response) => {
 
       const [newChat] = await sql`
         INSERT INTO chat.chats (name, type)
-        VALUES (${name || 'Private Chat'}, ${type})
+        VALUES (${name || "Private Chat"}, ${type})
         RETURNING id, public_id, name, type
       `;
 
@@ -128,13 +124,13 @@ ChatsRouter.post('/', async (request, response) => {
 
     response.status(201).json(newChat);
   } catch (error) {
-    console.error('Chat creation error:', error);
-    const status = error.message === 'User not found' ? 404 : 500;
+    console.error("Chat creation error:", error);
+    const status = error.message === "User not found" ? 404 : 500;
     response.status(status).json({ error: error.message });
   }
 });
 
-ChatsRouter.put('/:public_id', async (request, response) => {
+ChatsRouter.put("/:public_id", async (request, response) => {
   try {
     const { field, fieldData } = request.body;
 
@@ -147,14 +143,13 @@ ChatsRouter.put('/:public_id', async (request, response) => {
     `;
 
     response.status(201).json(updatedMessage);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
 
-ChatsRouter.delete('/:public_id', async (request, response) => {
+ChatsRouter.delete("/:public_id", async (request, response) => {
   try {
     const deletedChat = await postgreSql`
       DELETE CASCADE from chats
@@ -163,9 +158,8 @@ ChatsRouter.delete('/:public_id', async (request, response) => {
     `;
 
     response.status(201).json(deletedChat);
-  }
-  catch(error) {
+  } catch (error) {
     console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
+    response.status(500).json({ message: "Internal server error" });
   }
 });
