@@ -1,6 +1,7 @@
 const ChatsRouter = require("express").Router();
 
 const postgreSql = require("../db.js");
+const { checkChatAccess } = require('../utils/middleware.js');
 // const config = require('../utils/config.js');
 
 ChatsRouter.get("/", async (request, response) => {
@@ -15,11 +16,11 @@ ChatsRouter.get("/", async (request, response) => {
     response.status(500).json({ message: "Internal server error" });
   }
 });
-ChatsRouter.get("/:chat_public_id", async (request, response) => {
+ChatsRouter.get("/info/:public_id", checkChatAccess, async (request, response) => {
   try {
     const [chat] = await postgreSql`
       SELECT * FROM chats
-      WHERE public_id = ${request.params.chat_public_id}
+      WHERE public_id = ${request.params.public_id}
     `;
 
     if (!chat) {
@@ -32,11 +33,11 @@ ChatsRouter.get("/:chat_public_id", async (request, response) => {
     response.status(500).json({ message: "Internal server error" });
   }
 });
-ChatsRouter.get("/:public_user_id", async (request, response) => {
+ChatsRouter.get("/user/:public_id", checkChatAccess, async (request, response) => {
   try {
     const chats = await postgreSql`
     WITH user_info AS (
-          SELECT id, public_id FROM chat.users WHERE public_id = ${request.params.public_user_id}
+          SELECT id, public_id FROM chat.users WHERE public_id = ${request.params.public_id}
       )
       SELECT DISTINCT ON (c.id)
           c.public_id AS chat_id,
@@ -76,7 +77,7 @@ ChatsRouter.get("/:public_user_id", async (request, response) => {
   }
 });
 
-ChatsRouter.post("/", async (request, response) => {
+ChatsRouter.post("/", checkChatAccess, async (request, response) => {
   try {
     const { recipient_public_id, type, name } = request.body;
     const creator_id = request.user.id;
@@ -130,14 +131,13 @@ ChatsRouter.post("/", async (request, response) => {
   }
 });
 
-ChatsRouter.put("/:public_id", async (request, response) => {
+ChatsRouter.put("/:public_id", checkChatAccess, async (request, response) => {
   try {
     const { field, fieldData } = request.body;
 
     const updatedMessage = await postgreSql`
       UPDATE chats
-      SET ${field} = ${fieldData}
-      SET edited_at = now()
+      SET ${postgreSql(field)} = ${fieldData},
       WHERE public_id = ${request.params.public_id}
       RETURNING public_id
     `;
@@ -149,10 +149,10 @@ ChatsRouter.put("/:public_id", async (request, response) => {
   }
 });
 
-ChatsRouter.delete("/:public_id", async (request, response) => {
+ChatsRouter.delete("/:public_id", checkChatAccess, async (request, response) => {
   try {
     const deletedChat = await postgreSql`
-      DELETE CASCADE from chats
+      DELETE FROM chats
       WHERE public_id = ${request.params.public_id}
       RETURNING *
     `;

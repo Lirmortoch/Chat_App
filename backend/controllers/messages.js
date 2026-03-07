@@ -1,6 +1,7 @@
 const MessagesRouter = require("express").Router();
 
 const postgreSql = require("../db.js");
+const { checkChatAccess, checkMessageAccess } = require("../utils/middleware.js");
 // const config = require('../utils/config.js');
 
 MessagesRouter.get("/", async (request, response) => {
@@ -16,26 +17,39 @@ MessagesRouter.get("/", async (request, response) => {
     response.status(500).json({ message: "Internal server error" });
   }
 });
-MessagesRouter.get("/message/:message_public_id", async (request, response) => {
-  try {
-    const [message] = await postgreSql`
+MessagesRouter.get(
+  "/message/:message_public_id",
+  checkMessageAccess,
+  async (request, response) => {
+    try {
+      const [message] = await postgreSql`
       SELECT * FROM messages
       WHERE public_id = ${request.params.message_public_id}
     `;
 
-    if (!message) {
-      response.status(404).json({ message: "Message not found" });
+      if (!message) {
+        response.status(404).json({ message: "Message not found" });
+      }
+
+      response.json(message);
+    } catch (error) {
+      console.log(error);
+      response.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+MessagesRouter.get(
+  "/user/:user_public_id",
+  checkMessageAccess,
+  async (request, response) => {
+    if (request.userRoleInChat !== "owner") {
+      return response
+        .status(403)
+        .json({ message: "Only owners can delete the chat" });
     }
 
-    response.json(message);
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: "Internal server error" });
-  }
-});
-MessagesRouter.get("/:user_public_id", async (request, response) => {
-  try {
-    const messages = await postgreSql`
+    try {
+      const messages = await postgreSql`
       WITH user_data AS (
           SELECT id FROM chat.users WHERE public_id = ${request.params.user_public_id}
       ),
@@ -73,126 +87,166 @@ MessagesRouter.get("/:user_public_id", async (request, response) => {
       ORDER BY lm.created_at DESC NULLS LAST;
     `;
 
-    if (!messages) {
-      response.status(404).json({ message: "Message not found" });
+      if (!messages) {
+        response.status(404).json({ message: "Message not found" });
+      }
+
+      response.json(messages);
+    } catch (error) {
+      console.log(error);
+      response.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
+MessagesRouter.get(
+  "/chat/:chat_public_id",
+  checkChatAccess,
+  async (request, response) => {
+    if (request.userRoleInChat !== "owner") {
+      return response
+        .status(403)
+        .json({ message: "Only owners can delete the chat" });
     }
 
-    response.json(messages);
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: "Internal server error" });
-  }
-});
-MessagesRouter.get("/:chat_public_id", async (request, response) => {
-  try {
-    const { chat_public_id } = request.params;
-    const user_public_id = request.user.public_id;
+    try {
+      const { chat_public_id } = request.params;
+      const user_public_id = request.user.public_id;
 
-    const messages = await postgreSql`
+      const messages = await postgreSql`
       WITH updated_member AS (
-    -- 1. Обнуляем счетчик непрочитанных
-    UPDATE chat.chats_members
-    SET last_read_at = CURRENT_TIMESTAMP
-    WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${user_public_id})
-      AND chat_id = (SELECT id FROM chat.chats WHERE public_id = ${chat_public_id})
-    RETURNING chat_id
-)
--- 2. Собираем сообщение, автора и массив файлов
-SELECT 
-    m.public_id AS message_id,
-    m.message,
-    m.created_at,
-    u.public_id AS sender_id,
-    u.name AS sender_name,
-    -- Магия JSON: собираем все вложения в массив объектов
-    COALESCE(
-        (SELECT json_agg(
-            json_build_object(
-                'url', a.file_url,
-                'type', a.file_type
-            )
-        ) 
-        FROM chat.additionals a 
-        WHERE a.message_id = m.id), 
-        '[]'
-    ) AS attachments
-FROM chat.messages m
-JOIN chat.users u ON m.sender_id = u.id
-WHERE m.chat_id = (SELECT chat_id FROM updated_member)
-ORDER BY m.created_at ASC;
+    
+          UPDATE chat.chats_members
+          SET last_read_at = CURRENT_TIMESTAMP
+          WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${user_public_id})
+            AND chat_id = (SELECT id FROM chat.chats WHERE public_id = ${chat_public_id})
+          RETURNING chat_id
+      )
+
+      SELECT 
+          m.public_id AS message_id,
+          m.message,
+          m.created_at,
+          u.public_id AS sender_id,
+          u.name AS sender_name,
+          
+          COALESCE(
+              (SELECT json_agg(
+                  json_build_object(
+                      'url', a.file_url,
+                      'type', a.file_type
+                  )
+              ) 
+              FROM chat.additionals a 
+              WHERE a.message_id = m.id), 
+              '[]'
+          ) AS attachments
+      FROM chat.messages m
+      JOIN chat.users u ON m.sender_id = u.id
+      WHERE m.chat_id = (SELECT chat_id FROM updated_member)
+      ORDER BY m.created_at ASC;
     `;
 
-    response.json(messages);
-  } catch (error) {
-    response.status(500).json({ error: "Failed to fetch messages" });
+      response.json(messages);
+    } catch (error) {
+      response.status(500).json({ error: "Failed to fetch messages" });
+    }
+  },
+);
+
+MessagesRouter.post("/", checkChatAccess, async (request, response) => {
+  if (request.userRoleInChat !== "owner") {
+    return response
+      .status(403)
+      .json({ message: "Only owners can delete the chat" });
   }
-});
 
-MessagesRouter.post("/", async (request, response) => {
   try {
-    const { message, additionals } = request.body;
+    const { message, chat_public_id, additionals } = request.body;
+    const sender_id = request.user.id;
 
-    const insertedMessage = await postgreSql`
-      INSERT INTO messages (
-        message,
-        created_at,
-      )
-      VALUES (
-        ${message}
-        now()
-      )
-      RETURNING public_id, message, created_at
-    `;
+    const result = await postgreSql.begin(async (sql) => {
+      const [chat] =
+        await sql`SELECT id FROM chat.chats WHERE public_id = ${chat_public_id}`;
 
-    response.status(201).json(insertedMessage);
+      const [newMessage] = await sql`
+        INSERT INTO chat.messages (chat_id, sender_id, message)
+        VALUES (${chat.id}, ${sender_id}, ${message})
+        RETURNING id, public_id, created_at
+      `;
+
+      if (additionals && additionals.length > 0) {
+        await sql`
+          INSERT INTO chat.additionals (file_type, file_url, message_id)
+          ${sql(additionals.map((a) => ({ ...a, message_id: newMessage.id })))}
+        `;
+      }
+      return newMessage;
+    });
+
+    response.status(201).json(result);
   } catch (error) {
-    console.log(error);
+    console.error(error);
     response.status(500).json({ message: "Internal server error" });
   }
 });
 
-MessagesRouter.put("/:public_id", async (request, response) => {
-  try {
-    const { fieldData } = request.body;
+MessagesRouter.put(
+  "/:public_id",
+  checkChatAccess,
+  async (request, response) => {
+    try {
+      const { fieldData } = request.body;
 
-    const updatedMessage = await postgreSql`
+      const updatedMessage = await postgreSql`
       UPDATE messages
-      SET message = ${fieldData}
+      SET message = ${fieldData},
       SET edited_at = now()
       WHERE public_id = ${request.params.public_id}
       RETURNING public_id
     `;
 
-    response.status(201).json(updatedMessage);
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: "Internal server error" });
-  }
-});
+      response.status(201).json(updatedMessage);
+    } catch (error) {
+      console.log(error);
+      response.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
 
-MessagesRouter.delete("/message/:public_id", async (request, response) => {
-  try {
-    const [deletedMessage] = await postgreSql`
+MessagesRouter.delete(
+  "/message/:public_id",
+  checkChatAccess,
+  async (request, response) => {
+    try {
+      const [deletedMessage] = await postgreSql`
       DELETE CASCADE from messages
       WHERE public_id = ${request.params.public_id}
       RETURNING *
     `;
 
-    response.status(201).json(deletedMessage);
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: "Internal server error" });
-  }
-});
+      response.status(201).json(deletedMessage);
+    } catch (error) {
+      console.log(error);
+      response.status(500).json({ message: "Internal server error" });
+    }
+  },
+);
 MessagesRouter.delete(
-  "/messages/:chat_public_id",
+  "/chat/:chat_public_id",
+  checkChatAccess,
   async (request, response) => {
+    if (request.userRoleInChat !== "owner") {
+      return response
+        .status(403)
+        .json({ message: "Only owners can delete the chat" });
+    }
     try {
       const deletedMessages = await postgreSql`
-      DELETE CASCADE messages
-      JOIN chat.chats WHERE chats.public_id = ${request.params.chat_public_id}
+      DELETE FROM chat.messages
+      WHERE chat_id = (SELECT id FROM chat.chats WHERE public_id = ${request.params.chat_public_id})
       RETURNING *
     `;
+      response.json({ count: deletedMessages.length });
     } catch (error) {
       console.log(error);
       response.status(500).json({ message: "Internal server error" });

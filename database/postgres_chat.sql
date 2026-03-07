@@ -63,7 +63,7 @@ CREATE TABLE chat.chats_members (
 	delete_reason varchar(128) NULL,
 	restricted bool NULL,
 	restrict_reason varchar(128) NULL,
-	last_readed_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	last_read_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	CONSTRAINT chats_members_pk PRIMARY KEY (chat_id, user_id),
 	CONSTRAINT chats_members_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id),
 	CONSTRAINT chats_members_user_fk FOREIGN KEY (user_id) REFERENCES chat.users(id)
@@ -112,7 +112,7 @@ CREATE TABLE chat.messages (
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT messages_pk PRIMARY KEY (id),
 	CONSTRAINT messages_unique UNIQUE (public_id),
-	CONSTRAINT messages_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chat(id) ON DELETE CASCADE,
+	CONSTRAINT messages_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id) ON DELETE CASCADE,
 	CONSTRAINT messages_user_fk FOREIGN KEY (sender_id) REFERENCES chat.users(id) ON DELETE CASCADE
 );
 
