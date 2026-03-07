@@ -1,39 +1,51 @@
-const ChatsRouter = require("express").Router();
+const ChatsRouter = require('express').Router();
 
-const postgreSql = require("../db.js");
-const { checkChatAccess } = require('../utils/middleware.js');
+const postgreSql = require('../db.js');
+const { checkChatAccess, fieldWhiteList } = require('../utils/middleware.js');
 // const config = require('../utils/config.js');
 
-ChatsRouter.get("/", async (request, response) => {
+ChatsRouter.get('/', async (request, response) => {
   try {
     const chats = await postgreSql`
-      SELECT * FROM chats
+      SELECT public_id, name
+      FROM chats
     `;
 
     response.json(chats);
   } catch (error) {
     console.log(error);
-    response.status(500).json({ message: "Internal server error" });
+    response.status(500).json({ message: 'Internal server error' });
   }
 });
-ChatsRouter.get("/info/:public_id", checkChatAccess, async (request, response) => {
+ChatsRouter.get('/info/:public_id', checkChatAccess, async (request, response) => {
+  if (request.userRoleInChat === 'undefined') {
+    return response.status(403).json({ message: 'Only users with access can see this chat' });
+  }
+
   try {
+    const chatId = request.chatInternalId;
+
     const [chat] = await postgreSql`
-      SELECT * FROM chats
-      WHERE public_id = ${request.params.public_id}
+      SELECT name, url, type, public_id
+      FROM chats
+      WHERE id = ${chatId}
     `;
 
     if (!chat) {
-      response.status(404).json({ message: "Message not found" });
+      response.status(404).json({ message: 'Message not found' });
     }
 
     response.json(chat);
   } catch (error) {
     console.log(error);
-    response.status(500).json({ message: "Internal server error" });
+    response.status(500).json({ message: 'Internal server error' });
   }
 });
-ChatsRouter.get("/user/:public_id", checkChatAccess, async (request, response) => {
+ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) => {
+  if (request.userRoleInChat === 'undefined') {
+    return response.status(403).json({ message: 'Only users with access can see this chats' });
+  }
+
   try {
     const chats = await postgreSql`
     WITH user_info AS (
@@ -73,11 +85,11 @@ ChatsRouter.get("/user/:public_id", checkChatAccess, async (request, response) =
     response.json(chats);
   } catch (error) {
     console.log(error);
-    response.status(500).json({ message: "Internal server error" });
+    response.status(500).json({ message: 'Internal server error' });
   }
 });
 
-ChatsRouter.post("/", checkChatAccess, async (request, response) => {
+ChatsRouter.post('/', async (request, response) => {
   try {
     const { recipient_public_id, type, name } = request.body;
     const creator_id = request.user.id;
@@ -88,10 +100,10 @@ ChatsRouter.post("/", checkChatAccess, async (request, response) => {
       `;
 
       if (!recipient) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
-      if (type === "private") {
+      if (type === 'private') {
         const [existingChat] = await sql`
           SELECT c.public_id, c.name, c.type
           FROM chat.chats c
@@ -110,7 +122,7 @@ ChatsRouter.post("/", checkChatAccess, async (request, response) => {
 
       const [newChat] = await sql`
         INSERT INTO chat.chats (name, type)
-        VALUES (${name || "Private Chat"}, ${type})
+        VALUES (${name || 'Private Chat'}, ${type})
         RETURNING id, public_id, name, type
       `;
 
@@ -125,41 +137,54 @@ ChatsRouter.post("/", checkChatAccess, async (request, response) => {
 
     response.status(201).json(newChat);
   } catch (error) {
-    console.error("Chat creation error:", error);
-    const status = error.message === "User not found" ? 404 : 500;
+    console.error('Chat creation error:', error);
+    const status = error.message === 'User not found' ? 404 : 500;
     response.status(status).json({ error: error.message });
   }
 });
 
-ChatsRouter.put("/:public_id", checkChatAccess, async (request, response) => {
+ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, async (request, response) => {
+  if (request.userRoleInChat !== 'owner' || request.userRoleInChat !== 'admin') {
+    return response
+      .status(403)
+      .json({ message: 'Only owners or admins can edited fields of chat' });
+  }
+
   try {
     const { field, fieldData } = request.body;
+    const chatId = request.chatInternalId;
 
-    const updatedMessage = await postgreSql`
+    const updatedChat = await postgreSql`
       UPDATE chats
       SET ${postgreSql(field)} = ${fieldData},
-      WHERE public_id = ${request.params.public_id}
+      WHERE id = ${chatId}
       RETURNING public_id
     `;
 
-    response.status(201).json(updatedMessage);
+    response.status(201).json(updatedChat);
   } catch (error) {
     console.log(error);
-    response.status(500).json({ message: "Internal server error" });
+    response.status(500).json({ message: 'Internal server error' });
   }
 });
 
-ChatsRouter.delete("/:public_id", checkChatAccess, async (request, response) => {
+ChatsRouter.delete('/:public_id', checkChatAccess, async (request, response) => {
+  if (request.userRoleInChat !== 'owner') {
+    return response.status(403).json({ message: 'Only owners can delete the chat' });
+  }
+
   try {
+    const chatId = request.chatInternalId;
+
     const deletedChat = await postgreSql`
       DELETE FROM chats
-      WHERE public_id = ${request.params.public_id}
+      WHERE id = ${chatId}
       RETURNING *
     `;
 
     response.status(201).json(deletedChat);
   } catch (error) {
     console.log(error);
-    response.status(500).json({ message: "Internal server error" });
+    response.status(500).json({ message: 'Internal server error' });
   }
 });

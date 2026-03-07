@@ -1,17 +1,15 @@
-const postgreSql = require("../db.js");
+const postgreSql = require('../db.js');
 
 // Utility for generating random timestamps within a range
 const randomDate = (daysAgo) => {
   const date = new Date();
-  date.setSeconds(
-    date.getSeconds() - Math.floor(Math.random() * daysAgo * 86400),
-  );
+  date.setSeconds(date.getSeconds() - Math.floor(Math.random() * daysAgo * 86400));
   return date;
 };
 
 async function seed() {
   try {
-    console.log("🌱 Seeding process started...");
+    console.log('🌱 Seeding process started...');
 
     /* ============================================================
        1. CLEANUP (ORDER IS CRITICAL DUE TO FOREIGN KEYS)
@@ -27,7 +25,7 @@ async function seed() {
     /* ============================================================
        2. USERS (RETURNING ALL FIELDS FOR REFERENCE)
     ============================================================ */
-    console.log("👤 Creating users...");
+    console.log('👤 Creating users...');
     const users = await postgreSql`
       INSERT INTO chat.users (name, username, password_hash, email, phone_number)
       SELECT 
@@ -40,7 +38,7 @@ async function seed() {
     /* ============================================================
        3. CHATS
     ============================================================ */
-    console.log("💬 Creating chats...");
+    console.log('💬 Creating chats...');
     const chats = await postgreSql`
       INSERT INTO chat.chats (name, url, type)
       SELECT 
@@ -54,11 +52,11 @@ async function seed() {
     /* ============================================================
        4. CHAT MEMBERS (APPLYING BUSINESS RULES)
     ============================================================ */
-    console.log("👥 Populating chat members...");
+    console.log('👥 Populating chat members...');
     for (const chat of chats) {
       const shuffled = [...users].sort(() => 0.5 - Math.random());
 
-      if (chat.type === "private") {
+      if (chat.type === 'private') {
         // Private chats must have exactly 2 members
         const pair = shuffled.slice(0, 2);
         for (const user of pair) {
@@ -77,7 +75,7 @@ async function seed() {
     /* ============================================================
        5. MESSAGES (WITH REALISTIC TIMESTAMPS)
     ============================================================ */
-    console.log("✉️ Generating message history...");
+    console.log('✉️ Generating message history...');
     const messageEntries = [];
     for (let i = 0; i < 300; i++) {
       const randomChat = chats[Math.floor(Math.random() * chats.length)];
@@ -85,8 +83,7 @@ async function seed() {
       // Select a sender who is actually a member of the chosen chat
       const members =
         await postgreSql`SELECT user_id FROM chat.chats_members WHERE chat_id = ${randomChat.id}`;
-      const senderId =
-        members[Math.floor(Math.random() * members.length)].user_id;
+      const senderId = members[Math.floor(Math.random() * members.length)].user_id;
 
       messageEntries.push({
         chat_id: randomChat.id,
@@ -96,20 +93,20 @@ async function seed() {
       });
     }
     const messages = await postgreSql`
-      INSERT INTO chat.messages ${postgreSql(messageEntries, "chat_id", "sender_id", "message", "created_at")}
+      INSERT INTO chat.messages ${postgreSql(messageEntries, 'chat_id', 'sender_id', 'message', 'created_at')}
       RETURNING id
     `;
 
     /* ============================================================
        6. ATTACHMENTS (ADDITIONAL DATA)
     ============================================================ */
-    console.log("📎 Adding media attachments...");
-    const fileTypes = ["image", "video", "document", "audio"];
+    console.log('📎 Adding media attachments...');
+    const fileTypes = ['image', 'video', 'document', 'audio'];
     const extensions = {
-      image: "jpg",
-      video: "mp4",
-      document: "pdf",
-      audio: "mp3",
+      image: 'jpg',
+      video: 'mp4',
+      document: 'pdf',
+      audio: 'mp3',
     };
 
     const attachmentEntries = Array.from({ length: 80 }).map((_, i) => {
@@ -120,12 +117,12 @@ async function seed() {
         message_id: messages[Math.floor(Math.random() * messages.length)].id,
       };
     });
-    await postgreSql`INSERT INTO chat.additionals ${postgreSql(attachmentEntries, "file_type", "file_url", "message_id")}`;
+    await postgreSql`INSERT INTO chat.additionals ${postgreSql(attachmentEntries, 'file_type', 'file_url', 'message_id')}`;
 
     /* ============================================================
        7. CONTACTS (PREVENTING SELF-ADDITION)
     ============================================================ */
-    console.log("📇 Syncing contact lists...");
+    console.log('📇 Syncing contact lists...');
     for (let i = 0; i < 50; i++) {
       const owner = users[Math.floor(Math.random() * users.length)];
       const target = users[Math.floor(Math.random() * users.length)];
@@ -139,9 +136,9 @@ async function seed() {
       }
     }
 
-    console.log("✅ Seeding completed successfully!");
+    console.log('✅ Seeding completed successfully!');
   } catch (err) {
-    console.error("❌ Seeding failed:", err);
+    console.error('❌ Seeding failed:', err);
   } finally {
     await postgreSql.end();
   }

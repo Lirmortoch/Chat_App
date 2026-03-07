@@ -1,11 +1,12 @@
-const bcrypt = require("bcrypt");
-const UsersRouter = require("express").Router();
+const bcrypt = require('bcrypt');
+const UsersRouter = require('express').Router();
 
-const postgreSql = require("../db.js");
+const postgreSql = require('../db.js');
 
-const config = require("../utils/config.js");
+const config = require('../utils/config.js');
+const { fieldWhiteList } = require('../utils/middleware.js');
 
-UsersRouter.get("/", async (request, response) => {
+UsersRouter.get('/', async (request, response) => {
   try {
     const users = await postgreSql`
     SELECT public_id, email, name
@@ -15,17 +16,18 @@ UsersRouter.get("/", async (request, response) => {
     response.json(users);
   } catch (error) {
     console.log(error);
-    response.status(500).json({ message: "Internal server error" });
+    response.status(500).json({ message: 'Internal server error' });
   }
 });
-UsersRouter.get("/:public_id", async (request, response) => {
+UsersRouter.get('/:public_id', async (request, response) => {
   try {
     const [user] = await postgreSql`
-      SELECT * FROM users WHERE public_id = ${request.params["public_id"]}
+      SELECT name, username, email, phone_number, created_at, deleted, restricted, role, public_id
+      FROM users WHERE public_id = ${request.params['public_id']}
     `;
 
     if (!user) {
-      return response.status(404).json({ message: "User not found" });
+      return response.status(404).json({ message: 'User not found' });
     }
 
     response.json(user);
@@ -34,13 +36,15 @@ UsersRouter.get("/:public_id", async (request, response) => {
     response.status(500).json({ message: `Internal server error` });
   }
 });
+UsersRouter.get('/restricted/:public_id', async (request, response) => {});
+UsersRouter.get('/deleted/:public_id', async (request, response) => {});
 
-UsersRouter.post("/", async (request, response) => {
+UsersRouter.post('/', async (request, response) => {
   try {
     const { name, username, password, email, phoneNumber, role } = request.body;
 
     if (!password || !email) {
-      return response.status(400).json({ message: "Missing required fields" });
+      return response.status(400).json({ message: 'Missing required fields' });
     }
 
     const saltRounds = config.SALT_ROUNDS;
@@ -79,14 +83,14 @@ UsersRouter.post("/", async (request, response) => {
   }
 });
 
-UsersRouter.put("/:public_id", async (request, response) => {
+UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
   try {
     const { field, fieldData } = request.body;
 
     const updatedUser = await postgreSql`
       UPDATE users
-      SET ${field} = ${fieldData}
-      WHERE public_id = ${request.params["public_id"]}
+      SET ${postgreSql(field)} = ${fieldData}
+      WHERE public_id = ${request.params['public_id']}
       RETURNING public_id
     `;
 
@@ -97,17 +101,13 @@ UsersRouter.put("/:public_id", async (request, response) => {
   }
 });
 
-UsersRouter.delete("/:public_id", async (request, response) => {
+UsersRouter.delete('/:public_id', async (request, response) => {
   try {
     const deletedUser = await postgreSql`
-      DELETE CASCADE from users 
-      WHERE public_id = ${request.params["public_id"]}
+      DELETE from users 
+      WHERE public_id = ${request.params['public_id']}
       RETURNING public_id
     `;
-
-    if (deletedUser.length === 0) {
-      return response.status(404).json({ message: "User not found" });
-    }
 
     response.status(201).json(deletedUser);
   } catch (error) {
