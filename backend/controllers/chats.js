@@ -2,7 +2,6 @@ const ChatsRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
 const { checkChatAccess, fieldWhiteList } = require('../utils/middleware.js');
-// const config = require('../utils/config.js');
 
 ChatsRouter.get('/', async (request, response) => {
   try {

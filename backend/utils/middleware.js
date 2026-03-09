@@ -61,7 +61,7 @@ const fieldWhiteList = (request, response, next) => {
   const field = request.body;
 
   if (!list.includes(field)) {
-    response.status(403).json({ message: 'Wrong field' });
+    response.status(422).json({ message: 'Wrong field' });
   }
 
   next();

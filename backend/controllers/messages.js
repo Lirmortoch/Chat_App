@@ -2,7 +2,6 @@ const MessagesRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
 const { checkChatAccess, checkMessageAccess, fieldWhiteList } = require('../utils/middleware.js');
-// const config = require('../utils/config.js');
 
 MessagesRouter.get('/', async (request, response) => {
   try {
@@ -35,62 +34,6 @@ MessagesRouter.get('/message/:message_public_id', async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 });
-// MessagesRouter.get('/user/:user_public_id', checkChatAccess, async (request, response) => {
-//   if (request.userRoleInChat === 'undefined') {
-//     return response.status(403).json({
-//       message: 'Only users with access can see messages of this chat',
-//     });
-//   }
-
-//   try {
-//     const messages = await postgreSql`
-//       WITH user_data AS (
-//           SELECT id FROM chat.users WHERE public_id = ${request.params.user_public_id}
-//       ),
-//       last_messages AS (
-//           SELECT DISTINCT ON (m.chat_id) 
-//               m.chat_id,
-//               m.message,
-//               m.created_at,
-//               u.public_id AS sender_public_id
-//           FROM chat.messages m
-//           JOIN chat.users u ON m.sender_id = u.id
-//           WHERE m.chat_id IN (SELECT chat_id FROM chat.chats_members WHERE user_id = (SELECT id FROM user_data))
-//           ORDER BY m.chat_id, m.created_at DESC
-//       )
-//       SELECT 
-//           c.public_id AS chat_public_id,
-//           CASE 
-//               WHEN c.type = 'private' THEN (
-//                   SELECT u2.name 
-//                   FROM chat.chats_members cm2
-//                   JOIN chat.users u2 ON cm2.user_id = u2.id
-//                   WHERE cm2.chat_id = c.id AND cm2.user_id != (SELECT id FROM user_data)
-//                   LIMIT 1
-//               )
-//               ELSE c.name 
-//           END AS display_name,
-//           c.type AS chat_type,
-//           lm.message AS last_message_text,
-//           lm.created_at AS last_message_time,
-//           lm.sender_public_id AS last_message_sender_id
-//       FROM chat.chats_members cm
-//       JOIN chat.chats c ON cm.chat_id = c.id
-//       LEFT JOIN last_messages lm ON c.id = lm.chat_id
-//       WHERE cm.user_id = (SELECT id FROM user_data)
-//       ORDER BY lm.created_at DESC NULLS LAST;
-//     `;
-
-//     if (!messages) {
-//       response.status(404).json({ message: 'Message not found' });
-//     }
-
-//     response.json(messages);
-//   } catch (error) {
-//     console.log(error);
-//     response.status(500).json({ message: 'Internal server error' });
-//   }
-// });
 MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, response) => {
   if (request.userRoleInChat === 'undefined') {
     return response.status(403).json({
@@ -169,6 +112,7 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
           ${sql(additionals.map((a) => ({ ...a, message_id: newMessage.id })))}
         `;
       }
+      
       return newMessage;
     });
 
