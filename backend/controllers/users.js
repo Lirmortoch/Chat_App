@@ -9,7 +9,7 @@ const { fieldWhiteList } = require('../utils/middleware.js');
 UsersRouter.get('/', async (request, response) => {
   try {
     const users = await postgreSql`
-    SELECT public_id, email, name
+    SELECT public_id
     FROM chat.users
   `;
 
@@ -58,7 +58,6 @@ UsersRouter.post('/', async (request, response) => {
           password_hash,
           email,
           phone_number,
-          created_at,
           deleted,
           restricted,
           role
@@ -69,7 +68,6 @@ UsersRouter.post('/', async (request, response) => {
           ${passwordHash},
           ${email},
           ${phoneNumber},
-          now(),
           false,
           false,
           ${role}
@@ -120,8 +118,8 @@ UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
       else {
         [updatedData] = await sql`
           UPDATE chat.users
-          SET ${postgreSql(field)} = ${fieldData}
-          RETURNING ${postgreSql(field)}
+          SET ${field} = ${fieldData}
+          RETURNING ${field}
         `;
       }
 

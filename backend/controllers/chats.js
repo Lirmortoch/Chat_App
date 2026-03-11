@@ -6,7 +6,7 @@ const { checkChatAccess, fieldWhiteList } = require('../utils/middleware.js');
 ChatsRouter.get('/', async (request, response) => {
   try {
     const chats = await postgreSql`
-      SELECT public_id, name
+      SELECT public_id
       FROM chats
     `;
 
@@ -111,7 +111,7 @@ ChatsRouter.post('/', async (request, response) => {
     const { recipient_public_id, type, name } = request.body;
     const creator_id = request.user.id;
 
-    const newChat = await postgreSql.begin(async (sql) => {
+    const insertedChat = await postgreSql.begin(async (sql) => {
       const [recipient] = await sql`
         SELECT id FROM chat.users WHERE public_id = ${recipient_public_id}
       `;
@@ -140,7 +140,7 @@ ChatsRouter.post('/', async (request, response) => {
       const [newChat] = await sql`
         INSERT INTO chat.chats (name, type)
         VALUES (${name || 'Private Chat'}, ${type})
-        RETURNING id, public_id, name, type
+        RETURNING public_id, name, type
       `;
 
       const participants = [creator_id, recipient.id];
@@ -152,7 +152,7 @@ ChatsRouter.post('/', async (request, response) => {
       return newChat;
     });
 
-    response.status(201).json(newChat);
+    response.status(201).json(insertedChat);
   } catch (error) {
     console.error('Chat creation error:', error);
     const status = error.message === 'User not found' ? 404 : 500;
@@ -200,7 +200,7 @@ ChatsRouter.delete('/:public_id', checkChatAccess, async (request, response) => 
     const deletedChat = await postgreSql`
       DELETE FROM chats
       WHERE id = ${chatId}
-      RETURNING id, name, url, public_id
+      RETURNING name, url, public_id
     `;
 
     response.status(201).json(deletedChat);

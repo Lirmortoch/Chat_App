@@ -6,7 +6,7 @@ const { checkChatAccess, checkMessageAccess, fieldWhiteList } = require('../util
 MessagesRouter.get('/', async (request, response) => {
   try {
     const messages = await postgreSql`
-      SELECT public_id, message
+      SELECT public_id
       FROM chat.messages
     `;
 
@@ -104,7 +104,7 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
     const chatId = request.chatInternalId;
     const sender_id = request.user.id;
 
-    const result = await postgreSql.begin(async (sql) => {
+    const insertedMessage = await postgreSql.begin(async (sql) => {
       const [chat] = await sql`SELECT id FROM chat.chats WHERE public_id = ${chatId}`;
 
       const [newMessage] = await sql`
@@ -123,7 +123,7 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
       return newMessage;
     });
 
-    response.status(201).json(result);
+    response.status(201).json(insertedMessage);
   } catch (error) {
     console.error(error);
     response.status(500).json({ message: 'Internal server error' });
@@ -150,7 +150,7 @@ MessagesRouter.put(
             SET message = ${fieldData},
             SET edited_at = now()
             WHERE id = ${messageInternalId}
-            RETURNING message, edited_at
+            RETURNING message, edited_at, public_id
           `;
         }
         else if (field === 'additional') {
@@ -158,8 +158,9 @@ MessagesRouter.put(
             UPDATE chat.additionals
             SET file_url = ${fieldData.file_url}
             SET file_type = ${fieldData.file_type}
+            SET edited_at = now()
             WHERE message_id = ${messageInternalId}
-            RETURNING file_url, file_type
+            RETURNING file_url, file_type, public_id
           `;
         }
         else {
