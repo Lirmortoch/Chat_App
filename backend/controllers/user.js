@@ -120,8 +120,8 @@ UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
       else {
         [updatedData] = await sql`
           UPDATE chat.users
-          SET ${field} = ${fieldData}
-          RETURNING ${field}
+          SET ${postgreSql(field)} = ${fieldData}
+          RETURNING ${postgreSql(field)}
         `;
       }
 

@@ -46,22 +46,23 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
     const user_public_id = request.user.public_id;
 
     const messages = await postgreSql`
-      WITH updated_member AS (
-    
+      WITH user_info AS (
+          SELECT id FROM chat.users WHERE public_id = ${user_public_id}
+      ),
+      updated_member AS (
           UPDATE chat.chats_members
           SET last_read_at = CURRENT_TIMESTAMP
-          WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${user_public_id})
-            AND chat_id = (SELECT id FROM chat.chats WHERE id = ${chatId})
+          WHERE user_id = (SELECT id FROM user_info)
+            AND chat_id = ${chatId}
           RETURNING chat_id
       )
-
       SELECT 
           m.public_id AS message_id,
           m.message,
           m.created_at,
           u.public_id AS sender_id,
           u.name AS sender_name,
-          
+          -- Вложения (без изменений)
           COALESCE(
               (SELECT json_agg(
                   json_build_object(
@@ -76,7 +77,13 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
       FROM chat.messages m
       JOIN chat.users u ON m.sender_id = u.id
       WHERE m.chat_id = (SELECT chat_id FROM updated_member)
-      ORDER BY m.created_at ASC;
+        AND NOT EXISTS (
+            SELECT 1 
+            FROM chat.messages_hidden mh 
+            WHERE mh.message_id = m.id 
+              AND mh.user_id = (SELECT id FROM user_info)
+        )
+      ORDER BY m.created_at ASC
     `;
 
     response.json(messages);
@@ -266,3 +273,5 @@ MessagesRouter.delete('/chat/:chat_public_id', checkChatAccess, async (request, 
     response.status(500).json({ message: 'Internal server error' });
   }
 });
+
+module.exports = MessagesRouter;

@@ -46,39 +46,57 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
   }
 
   try {
+    const user_public_id = request.params.public_id;
+
     const chats = await postgreSql`
     WITH user_info AS (
-          SELECT id, public_id FROM chat.users WHERE public_id = ${request.params.public_id}
-      )
-      SELECT DISTINCT ON (c.id)
-          c.public_id AS chat_id,
-          c.type AS chat_type,
-          CASE 
-              WHEN c.type = 'private' THEN (
-                  SELECT u2.name FROM chat.chats_members cm2
-                  JOIN chat.users u2 ON cm2.user_id = u2.id
-                  WHERE cm2.chat_id = c.id AND u2.id != (SELECT id FROM user_info)
-                  LIMIT 1
+        SELECT id FROM chat.users WHERE public_id = ${user_public_id}
+    )
+    SELECT DISTINCT ON (c.id)
+        c.public_id AS chat_id,
+        c.type AS chat_type,
+       
+        CASE 
+            WHEN c.type = 'private' THEN (
+                SELECT u2.name FROM chat.chats_members cm2
+                JOIN chat.users u2 ON cm2.user_id = u2.id
+                WHERE cm2.chat_id = c.id AND u2.id != (SELECT id FROM user_info)
+                LIMIT 1
+            )
+            ELSE c.name 
+        END AS display_name,
+
+        m.message AS last_message,
+        m.created_at AS last_message_time,
+        (SELECT public_id FROM chat.users WHERE id = m.sender_id) AS last_sender_id,
+
+        (
+            SELECT count(*) 
+            FROM chat.messages m2 
+            WHERE m2.chat_id = c.id 
+              AND m2.created_at > cm.last_read_at
+              AND m2.sender_id != (SELECT id FROM user_info)
+              AND NOT EXISTS (
+                  SELECT 1 FROM chat.messages_hidden mh 
+                  WHERE mh.message_id = m2.id AND mh.user_id = (SELECT id FROM user_info)
               )
-              ELSE c.name 
-          END AS display_name,
- 
-          m.message AS last_message,
-          m.created_at AS last_message_time,
-          (SELECT public_id FROM chat.users WHERE id = m.sender_id) AS last_sender_id,
-     
-          (
-              SELECT count(*) 
-              FROM chat.messages m2 
-              WHERE m2.chat_id = c.id 
-                AND m2.created_at > cm.last_read_at
-                AND m2.sender_id != (SELECT id FROM user_info)
-          ) AS unread_count
-      FROM chat.chats_members cm
-      JOIN chat.chats c ON cm.chat_id = c.id
-      LEFT JOIN chat.messages m ON c.id = m.chat_id
-      WHERE cm.user_id = (SELECT id FROM user_info)
-      ORDER BY c.id, m.created_at DESC;
+        ) AS unread_count
+
+    FROM chat.chats_members cm
+    JOIN chat.chats c ON cm.chat_id = c.id
+    LEFT JOIN chat.messages m ON m.id = (
+        SELECT m3.id 
+        FROM chat.messages m3
+        WHERE m3.chat_id = c.id
+          AND NOT EXISTS (
+              SELECT 1 FROM chat.messages_hidden mh2 
+              WHERE mh2.message_id = m3.id AND mh2.user_id = (SELECT id FROM user_info)
+          )
+        ORDER BY m3.created_at DESC
+        LIMIT 1
+    )
+    WHERE cm.user_id = (SELECT id FROM user_info)
+    ORDER BY c.id, m.created_at DESC NULLS LAST
     `;
 
     response.json(chats);
@@ -153,9 +171,13 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, async (request, 
     const { field, fieldData } = request.body;
     const chatId = request.chatInternalId;
 
+    if (field !== 'name') {
+      response.status(400).json({ message: 'Invalid field' });
+    }
+
     const updatedChat = await postgreSql`
       UPDATE chats
-      SET ${postgreSql(field)} = ${fieldData},
+      SET name = ${fieldData},
       WHERE id = ${chatId}
       RETURNING public_id
     `;
@@ -178,7 +200,7 @@ ChatsRouter.delete('/:public_id', checkChatAccess, async (request, response) => 
     const deletedChat = await postgreSql`
       DELETE FROM chats
       WHERE id = ${chatId}
-      RETURNING *
+      RETURNING id, name, url, public_id
     `;
 
     response.status(201).json(deletedChat);
@@ -187,3 +209,5 @@ ChatsRouter.delete('/:public_id', checkChatAccess, async (request, response) => 
     response.status(500).json({ message: 'Internal server error' });
   }
 });
+
+module.exports = ChatsRouter;
