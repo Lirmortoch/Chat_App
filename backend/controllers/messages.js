@@ -62,7 +62,7 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
           m.created_at,
           u.public_id AS sender_id,
           u.name AS sender_name,
-          -- Вложения (без изменений)
+      
           COALESCE(
               (SELECT json_agg(
                   json_build_object(
@@ -110,13 +110,13 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
       const [newMessage] = await sql`
         INSERT INTO chat.messages (chat_id, sender_id, message)
         VALUES (${chat.id}, ${sender_id}, ${message})
-        RETURNING id, public_id, created_at
+        RETURNING public_id, created_at
       `;
 
       if (additionals && additionals.length > 0) {
         await sql`
           INSERT INTO chat.additionals (file_type, file_url, message_id)
-          ${sql(additionals.map((a) => ({ ...a, message_id: newMessage.id })))}
+          ${sql(additionals.map((a) => ({ ...a, message_id: `SELECT id FROM chat.messages WHERE public_id = ${newMessage.public_id}` })))}
         `;
       }
       
@@ -210,7 +210,7 @@ MessagesRouter.delete(
           deletedAdditionals = await sql`
             DELETE from chat.additionals
             WHERE message_id = ${messageInternalId}
-            RETURNING file_type, file_url, created_at
+            RETURNING file_type, file_url, created_at, public_id
           `;
         }
 
@@ -241,22 +241,22 @@ MessagesRouter.delete('/chat/:chat_public_id', checkChatAccess, async (request, 
       const deletedMessages = await sql`
         DELETE FROM chat.messages
         WHERE chat_id = ${chatId}
-        RETURNING id, public_id, messages
+        RETURNING public_id, messages, created_at, edited_at
       `;
 
       let deletedAdditionals = [];
       deletedMessages.forEach(async (msg) => {
         const msgAdditionals = await sql`
-          SELECT id, file_url, file_type
+          SELECT file_url, file_type, public_id
           FROM chat.additionals
-          WHERE message_id = ${msg.id}
+          WHERE message_id = (SELECT id FROM chat.messages WHERE public_id = ${msg.public_id})
         `;
 
         if (msgAdditionals && msgAdditionals.length !== 0) {
           const [delAdds] = await sql`
             DELETE FROM chat.additionals
             WHERE message_id = ${msg.id}
-            RETURNING id, file_url, file_type
+            RETURNING public_id, file_url, file_type, created_at
           `;
 
           deletedAdditionals.push(delAdds);

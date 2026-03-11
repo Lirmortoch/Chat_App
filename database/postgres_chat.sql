@@ -83,10 +83,10 @@ CREATE TABLE chat.chats_members (
 	delete_reason varchar(128) NULL,
 	restricted bool NULL,
 	restrict_reason varchar(128) NULL,
-	last_readed_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	last_read_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	CONSTRAINT chats_members_pk PRIMARY KEY (chat_id, user_id),
-	CONSTRAINT chats_members_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id),
-	CONSTRAINT chats_members_user_fk FOREIGN KEY (user_id) REFERENCES chat.users(id)
+	CONSTRAINT chats_members_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id) ON DELETE CASCADE,
+	CONSTRAINT chats_members_user_fk FOREIGN KEY (user_id) REFERENCES chat.users(id) ON DELETE CASCADE
 );
 CREATE INDEX chats_members_user_id_idx ON chat.chats_members USING btree (user_id);
 
@@ -109,7 +109,7 @@ CREATE TABLE chat.contacts (
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT contacts_pk PRIMARY KEY (id),
 	CONSTRAINT contacts_unique_1 UNIQUE (public_id),
-	CONSTRAINT contacts_user_fk FOREIGN KEY (owner_id) REFERENCES chat.users(id),
+	CONSTRAINT contacts_user_fk FOREIGN KEY (owner_id) REFERENCES chat.users(id) ON DELETE CASCADE,
 	CONSTRAINT contacts_user_fk_1 FOREIGN KEY (user_id) REFERENCES chat.users(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX contacts_public_id_idx ON chat.contacts USING btree (public_id);

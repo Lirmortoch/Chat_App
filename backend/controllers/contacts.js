@@ -110,7 +110,13 @@ ContactsRouter.put('/:public_id', async (request, response) => {
 
 ContactsRouter.delete('/:public_id', async (request, response) => {
   try {
+    const deletedContact = await postgreSql`
+      DELETE FROM chat.contacts
+      WHERE public_id = ${request.params.public_id}
+      RETURNING phone_number, first_name, last_name, email, public_id
+    `;
 
+    response.status(201).json(deletedContact);
   }
   catch (error) {
     console.log(error);
