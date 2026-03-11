@@ -111,10 +111,11 @@ UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
           UPDATE chat.user_profile_photos 
           SET file_type, file_url, created_at
           ${sql({...fieldData, created_at: CURRENT_TIMESTAMP})}
+          RETURNING file_type, file_url
         `;
       }
-      else if (field === 'message') {
-        response.status(422).json({ message: 'Wrong field' });
+      else if (field === 'message' || field === 'additional') {
+        response.status(400).json({ message: 'Invalid field' });
       }
       else {
         [updatedData] = await sql`

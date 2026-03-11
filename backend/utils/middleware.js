@@ -56,12 +56,12 @@ const checkMessageAccess = async (request, response, next) => {
 };
 
 const fieldWhiteList = (request, response, next) => {
-  const list = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar'];
+  const list = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additional'];
 
   const field = request.body;
 
   if (!list.includes(field)) {
-    response.status(422).json({ message: 'Wrong field' });
+    response.status(400).json({ message: 'Invalid field' });
   }
 
   next();

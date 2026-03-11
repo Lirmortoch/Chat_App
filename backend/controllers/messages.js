@@ -7,7 +7,7 @@ MessagesRouter.get('/', async (request, response) => {
   try {
     const messages = await postgreSql`
       SELECT public_id, message
-      FROM messages
+      FROM chat.messages
     `;
 
     response.json(messages);
@@ -20,7 +20,7 @@ MessagesRouter.get('/message/:message_public_id', async (request, response) => {
   try {
     const [message] = await postgreSql`
       SELECT message, created_at, edited_at, public_id
-      FROM messages
+      FROM chat.messages
       WHERE public_id = ${request.params.message_public_id}
     `;
 
@@ -130,15 +130,37 @@ MessagesRouter.put(
   fieldWhiteList,
   async (request, response) => {
     try {
-      const { fieldData } = request.body;
+      const { field, fieldData } = request.body;
+      const messageInternalId = request.messageInternalId;
+      
+      
+      const updatedMessage = await postgreSql.begin(async (sql) => {
+        let uptMessage;
 
-      const updatedMessage = await postgreSql`
-      UPDATE messages
-      SET message = ${fieldData},
-      SET edited_at = now()
-      WHERE public_id = ${request.params.public_id}
-      RETURNING public_id
-    `;
+        if (field === 'message') {
+          [uptMessage] = await sql`
+            UPDATE chat.messages
+            SET message = ${fieldData},
+            SET edited_at = now()
+            WHERE id = ${messageInternalId}
+            RETURNING message, edited_at
+          `;
+        }
+        else if (field === 'additional') {
+          [uptMessage] = await sql`
+            UPDATE chat.additionals
+            SET file_url = ${fieldData.file_url}
+            SET file_type = ${fieldData.file_type}
+            WHERE message_id = ${messageInternalId}
+            RETURNING file_url, file_type
+          `;
+        }
+        else {
+          response.status(400).json({ message: 'Invalid field' });
+        }
+
+        return uptMessage;
+      });
 
       response.status(201).json(updatedMessage);
     } catch (error) {
@@ -160,11 +182,35 @@ MessagesRouter.delete(
     }
 
     try {
-      const [deletedMessage] = await postgreSql`
-      DELETE CASCADE from messages
-      WHERE public_id = ${request.params.public_id}
-      RETURNING *
-    `;
+      const messageInternalId = request.messageInternalId;
+
+      const deletedMessage = await postgreSql.begin(async (sql) => {
+          const [deletedMessage] = await sql`
+          DELETE from chat.messages
+          WHERE id = ${messageInternalId}
+          RETURNING message, public_id, created_at, edited_at
+        `;
+
+        const messageAdditionals = await sql`
+          SELECT file_type, file_url, created_at
+          FROM chat.additionals
+          WHERE message_id = ${messageInternalId}
+        `;
+
+        let deletedAdditionals;
+        if (messageAdditionals && messageAdditionals.length !== 0) {
+          deletedAdditionals = await sql`
+            DELETE from chat.additionals
+            WHERE message_id = ${messageInternalId}
+            RETURNING file_type, file_url, created_at
+          `;
+        }
+
+        return {
+          deletedMessage,
+          deletedAdditionals,
+        }
+      });
 
       response.status(201).json(deletedMessage);
     } catch (error) {
@@ -179,15 +225,42 @@ MessagesRouter.delete('/chat/:chat_public_id', checkChatAccess, async (request, 
       message: 'Only owners or admins can delete messages in this chat',
     });
   }
+
   try {
     const chatId = request.chatInternalId;
 
-    const deletedMessages = await postgreSql`
-      DELETE FROM chat.messages
-      WHERE chat_id = (SELECT id FROM chat.chats WHERE id = ${chatId})
-      RETURNING *
-    `;
-    response.json({ count: deletedMessages.length });
+    const delMsgs = await postgreSql.begin(async (sql) => {
+      const deletedMessages = await sql`
+        DELETE FROM chat.messages
+        WHERE chat_id = ${chatId}
+        RETURNING id, public_id, messages
+      `;
+
+      let deletedAdditionals = [];
+      deletedMessages.forEach(async (msg) => {
+        const msgAdditionals = await sql`
+          SELECT id, file_url, file_type
+          FROM chat.additionals
+          WHERE message_id = ${msg.id}
+        `;
+
+        if (msgAdditionals && msgAdditionals.length !== 0) {
+          const [delAdds] = await sql`
+            DELETE FROM chat.additionals
+            WHERE message_id = ${msg.id}
+            RETURNING id, file_url, file_type
+          `;
+
+          deletedAdditionals.push(delAdds);
+        }
+
+        return {
+          deletedMessages,
+          deletedAdditionals,
+        }
+      });
+    });
+    response.json(delMsgs);
   } catch (error) {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
