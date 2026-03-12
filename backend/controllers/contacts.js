@@ -42,11 +42,28 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
   try {
     const userId = request.user.id;
 
-    const contacts = await postgreSql`
-      SELECT phone_number, email, first_name, last_name, created_at, public_id
-      FROM chat.contacts
-      WHERE owner_id = ${userId}
-    `;
+    const contacts = await postgreSql.begin(async (sql) => {
+      const contactsData = await sql`
+        SELECT phone_number, email, first_name, last_name, created_at, public_id, user_id
+        FROM chat.contacts
+        WHERE owner_id = ${userId}
+      `;
+
+      const contactsAvatars = [];
+      contactsData.foeEach(async (contact) => {
+        const contactAvatar = await sql`
+          SELECT file_url, file_type, is_main, created_at
+          FROM chat.user_profile_photos
+          WHERE user_id = ${contact.user_id}
+        `;
+        contactsAvatars.push(contactAvatar);
+      });
+
+      return {
+        contactsData,
+        contactsAvatars,
+      }
+    });
 
     response.json(contacts);
   }
@@ -70,15 +87,15 @@ ContactsRouter.post('/', async (request, response) => {
         user_id,
         owner_id
       )
-        VALUES (
-          ${phone_number},
-          ${first_name},
-          ${last_name},
-          ${email},
-          SELECT id from chat.users WHERE public_id = ${user_public_id},
-          ${ownerId}
-        )
-        RETURNING phone_number, first_name, last_name, email, public_id
+      VALUES (
+        ${phone_number},
+        ${first_name},
+        ${last_name},
+        ${email},
+        SELECT id from chat.users WHERE public_id = ${user_public_id},
+        ${ownerId}
+      )
+      RETURNING phone_number, first_name, last_name, email, public_id
     `;
 
     response.status(201).json(insertedContact);
@@ -89,7 +106,7 @@ ContactsRouter.post('/', async (request, response) => {
   }
 });
 
-ContactsRouter.put('/:public_id', async (request, response) => {
+ContactsRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
   try {
     const { field, fieldData } = request.body;
 

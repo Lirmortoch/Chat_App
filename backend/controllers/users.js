@@ -21,10 +21,22 @@ UsersRouter.get('/', async (request, response) => {
 });
 UsersRouter.get('/:public_id', async (request, response) => {
   try {
-    const [user] = await postgreSql`
-      SELECT name, username, email, phone_number, created_at, deleted, restricted, role, public_id
-      FROM chat.users WHERE public_id = ${request.params.public_id}
-    `;
+    const user = await postgreSql.begin(async (sql) => {
+      const [userData] = await sql`
+        SELECT name, username, email, phone_number, created_at, deleted, restricted, role
+        FROM chat.users WHERE public_id = ${request.params.public_id}
+      `;
+      const userAvatars = await sql`
+        SELECT file_url, file_type, is_main, created_at
+        FROM chat.user_profile_photos
+        WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${request.params.public_id})
+      `;
+
+      return {
+        userData,
+        userAvatars
+      }
+    });
 
     if (!user) {
       return response.status(404).json({ message: 'User not found' });
@@ -72,7 +84,7 @@ UsersRouter.post('/', async (request, response) => {
           false,
           ${role}
         )
-        RETURNING public_id, email, name, phone_number, username, role
+        RETURNING public_id, email, name, phone_number, username, role, id
       `;
 
       let usersAvatar;
@@ -81,6 +93,7 @@ UsersRouter.post('/', async (request, response) => {
         [usersAvatar] = await sql`
           INSERT INTO chat.user_profile_photos (file_type, file_url, user_id)
           ${sql({...avatar, user_id: usersData.id})}
+          RETURNING file_url, file_type, created_at, is_main
         `;
       }
 
@@ -108,8 +121,8 @@ UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
         [updatedData] = await sql`
           UPDATE chat.user_profile_photos 
           SET file_type, file_url, created_at
-          ${sql({...fieldData, created_at: CURRENT_TIMESTAMP})}
-          RETURNING file_type, file_url
+          ${sql({...fieldData, is_main: fieldData.is_main})}
+          RETURNING file_type, file_url, is_main
         `;
       }
       else if (field === 'message' || field === 'additional') {
@@ -139,26 +152,27 @@ UsersRouter.delete('/:public_id', async (request, response) => {
       const [delUser] = await sql`
         DELETE from chat.users 
         WHERE public_id = ${request.params.public_id}
-        RETURNING public_id, email, name, phone_number, username, role, deleted, restricted
+        RETURNING email, name, phone_number, username, role, deleted, restricted
       `;
 
-      const [avatar] = await sql`
-        SELECT file_url, file_type, created_at, is_main
+      const avatars = await sql`
+        SELECT file_url, file_type, created_at, is_main, id
         FROM chat.user_profile_photos
         WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${request.params.public_id})
       `;
 
-      let delAvatar;
-      if (avatar && avatar.length !== 0) {
-        [delAvatar] = await sql`
+      let delAvatars;
+      if (avatars && avatars.length !== 0) {
+        delAvatars = await sql`
           DELETE from chat.user_profile_photos
-          WHERE id = ${avatar.id}
+          WHERE user_id = (SELECT if FROM chat.users WHERE public_id = ${request.params.public_id})
+          RETURNING file_url, file_type, is_main, created_at
         `;
       }
 
       return {
         delUser,
-        delAvatar,
+        delAvatars,
       };
     });
 

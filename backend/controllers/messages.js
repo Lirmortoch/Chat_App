@@ -244,7 +244,7 @@ MessagesRouter.delete('/chat/:chat_public_id', checkChatAccess, async (request, 
         RETURNING public_id, messages, created_at, edited_at
       `;
 
-      let deletedAdditionals = [];
+      const deletedAdditionals = [];
       deletedMessages.forEach(async (msg) => {
         const msgAdditionals = await sql`
           SELECT file_url, file_type, public_id
@@ -253,7 +253,7 @@ MessagesRouter.delete('/chat/:chat_public_id', checkChatAccess, async (request, 
         `;
 
         if (msgAdditionals && msgAdditionals.length !== 0) {
-          const [delAdds] = await sql`
+          const delAdds = await sql`
             DELETE FROM chat.additionals
             WHERE message_id = ${msg.id}
             RETURNING public_id, file_url, file_type, created_at
