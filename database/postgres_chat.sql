@@ -41,6 +41,7 @@ CREATE TABLE chat.users (
 	"role" varchar(25) DEFAULT 'default'::character varying NOT NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	last_name varchar(128) NULL,
+	user_about varchar(128) NULL,
 	CONSTRAINT users_pk_idx PRIMARY KEY (id),
 	CONSTRAINT users_unique UNIQUE (username),
 	CONSTRAINT users_unique_1 UNIQUE (email),

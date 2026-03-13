@@ -1,5 +1,18 @@
 const bcrypt = require('bcrypt');
 const UsersRouter = require('express').Router();
+const Joi = require('joi');
+
+const userSchema = Joi.object({
+  first_name: Joi.string().min(3).max(128).required(),
+  username: Joi.string().min(5).max(45).required(),
+  password: Joi.string().pattern(new RegExp()).required(),
+  repeated_password: Joi.ref('password'),
+  email: Joi.string().email().required(), 
+	phone_number: Joi.string().pattern(new RegExp()),
+	role: Joi.string().valid('admin', 'user', 'owner').default('user').required(), 
+	last_name: Joi.string().min(3).max(128),
+	user_about: Joi.string().min(3).max(128),
+});
 
 const postgreSql = require('../db.js');
 
@@ -53,7 +66,7 @@ UsersRouter.get('/deleted/:public_id', async (request, response) => {});
 
 UsersRouter.post('/', async (request, response) => {
   try {
-    const { name, username, password, email, phoneNumber, role, avatar } = request.body;
+    const { name, username, password, email, phoneNumber, role, avatar, repeated_password } = request.body;
 
     if (!password || !email || !name || !role || !username) {
       return response.status(400).json({ message: 'Missing required fields' });

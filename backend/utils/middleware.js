@@ -56,7 +56,7 @@ const checkMessageAccess = async (request, response, next) => {
 };
 
 const fieldWhiteList = (request, response, next) => {
-  const list = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additional'];
+  const list = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additional', 'user_about'];
 
   const field = request.body;
 
