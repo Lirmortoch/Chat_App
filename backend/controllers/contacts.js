@@ -100,8 +100,25 @@ ContactsRouter.post('/', async (request, response) => {
     const { first_name, last_name, phone_number, email, user_public_id } = request.body;
     const ownerId = request.user.id;
 
+    const contact = contactSchema.validate({
+      first_name,
+      email,
+      phone_number,
+      last_name,
+    });
+
     if (!first_name || !email) {
       response.status(400).json({ message: "Missing required field" });
+    }
+    else if (contact.error !== undefined) {
+      response.status(400).json({ message: user.error });
+    }
+    else if (phone_number !== undefined) {
+      const parsed_phone_number = parsePhoneNumber(phone_number);
+      
+      if (!parsed_phone_number.isValid() || !parsed_phone_number.isPossible()) {
+        response.status(400).json({ message: "Phone number is wrong. Enter again" });
+      }
     }
 
     const insertedContact = await postgreSql`

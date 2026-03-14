@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const UsersRouter = require('express').Router();
 const Joi = require('joi');
+const parsePhoneNumber = require('libphonenumber-js');
 
 const userSchema = Joi.object({
   first_name: Joi.string().min(3).max(128),
@@ -85,6 +86,13 @@ UsersRouter.post('/', async (request, response) => {
     }
     else if (user.error !== undefined) {
       response.status(400).json({ message: user.error });
+    }
+    else if (phone_number !== undefined) {
+      const parsed_phone_number = parsePhoneNumber(phone_number);
+      
+      if (!parsed_phone_number.isValid() || !parsed_phone_number.isPossible()) {
+        response.status(400).json({ message: "Phone number is wrong. Enter again" });
+      }
     }
 
     const saltRounds = config.SALT_ROUNDS;

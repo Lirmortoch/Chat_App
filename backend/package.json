@@ -28,6 +28,7 @@
     "express-rate-limit": "^8.3.1",
     "helmet": "^8.1.0",
     "joi": "^18.0.2",
+    "libphonenumber-js": "^1.12.40",
     "postgres": "^3.4.8"
   },
   "devDependencies": {
