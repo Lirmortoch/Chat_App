@@ -1,9 +1,17 @@
 const ContactsRouter = require('express').Router();
+const Joi = require('joi');
 
 const postgreSql = require('../db.js');
 
 // const config = require('../utils/config.js');
 const { fieldWhiteList } = require('../utils/middleware.js');
+
+const contactSchema = Joi.object({
+  first_name: Joi.string().min(3).max(128),
+  email: Joi.string().email(), 
+  phone_number: Joi.string(),
+  last_name: Joi.string().min(3).max(128),
+});
 
 ContactsRouter.get('/', async (request, response) => {
   try {
@@ -21,11 +29,24 @@ ContactsRouter.get('/', async (request, response) => {
 });
 ContactsRouter.get('/:public_id', async (request, response) => {
   try {
-    const [contact] = await postgreSql`
-      SELECT phone_number, email, first_name, last_name, created_at
-      FROM chat.contacts
-      WHERE public_id = ${request.params.public_id}
-    `;
+    const contact = await postgreSql.begin(async (sql) => {
+      const [contactData] = await sql`
+        SELECT phone_number, email, first_name, last_name, created_at, user_id
+        FROM chat.contacts
+        WHERE public_id = ${request.params.public_id}
+      `;
+      const [contactAvatar] = await sql`
+        SELECT file_url, file_type, created_at
+        FROM chat.user_profile_photos
+        WHERE user_id = ${contactData.user_id}
+          AND is_main = true
+      `;
+
+      return {
+        contactData,
+        contactAvatar,
+      }
+    });
 
     if (!contact) {
       response.status(404).json({ message: 'Contact not found' });
@@ -55,6 +76,7 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
           SELECT file_url, file_type, is_main, created_at
           FROM chat.user_profile_photos
           WHERE user_id = ${contact.user_id}
+            AND is_main = true
         `;
         contactsAvatars.push(contactAvatar);
       });
@@ -78,6 +100,10 @@ ContactsRouter.post('/', async (request, response) => {
     const { first_name, last_name, phone_number, email, user_public_id } = request.body;
     const ownerId = request.user.id;
 
+    if (!first_name || !email) {
+      response.status(400).json({ message: "Missing required field" });
+    }
+
     const insertedContact = await postgreSql`
       INSERT INTO chat.contacts (
         phone_number,
@@ -92,7 +118,7 @@ ContactsRouter.post('/', async (request, response) => {
         ${first_name},
         ${last_name},
         ${email},
-        SELECT id from chat.users WHERE public_id = ${user_public_id},
+        (SELECT id from chat.users WHERE public_id = ${user_public_id}),
         ${ownerId}
       )
       RETURNING phone_number, first_name, last_name, email, public_id

@@ -3,13 +3,13 @@ const UsersRouter = require('express').Router();
 const Joi = require('joi');
 
 const userSchema = Joi.object({
-  first_name: Joi.string().min(3).max(128).required(),
-  username: Joi.string().min(5).max(45).required(),
-  password: Joi.string().pattern(new RegExp()).required(),
+  first_name: Joi.string().min(3).max(128),
+  username: Joi.string().min(5).max(45),
+  password: Joi.string().pattern(new RegExp('')),
   repeated_password: Joi.ref('password'),
-  email: Joi.string().email().required(), 
-	phone_number: Joi.string().pattern(new RegExp()),
-	role: Joi.string().valid('admin', 'user', 'owner').default('user').required(), 
+  email: Joi.string().email(), 
+	phone_number: Joi.string(),
+	role: Joi.string().valid('admin', 'user', 'owner').default('user'), 
 	last_name: Joi.string().min(3).max(128),
 	user_about: Joi.string().min(3).max(128),
 });
@@ -66,10 +66,25 @@ UsersRouter.get('/deleted/:public_id', async (request, response) => {});
 
 UsersRouter.post('/', async (request, response) => {
   try {
-    const { name, username, password, email, phoneNumber, role, avatar, repeated_password } = request.body;
+    const { first_name, last_name, username, password, email, phone_number, role, avatar, repeated_password, user_about } = request.body;
 
-    if (!password || !email || !name || !role || !username) {
-      return response.status(400).json({ message: 'Missing required fields' });
+    const user = userSchema.validate({
+      first_name,
+      username,
+      password,
+      repeated_password,
+      email,
+      phone_number,
+      role,
+      last_name,
+      user_about
+    });
+
+    if (!first_name || !username || !password || !email || !role || !repeated_password) {
+      response.status(400).json({ message: "Missing required field" });
+    }
+    else if (user.error !== undefined) {
+      response.status(400).json({ message: user.error });
     }
 
     const saltRounds = config.SALT_ROUNDS;
@@ -78,7 +93,7 @@ UsersRouter.post('/', async (request, response) => {
     const insertedUser = await postgreSql.begin(async (sql) => {
       const [usersData] = await sql`
         INSERT INTO chat.users (
-          name,
+          first_name,
           username,
           password_hash,
           email,
@@ -88,11 +103,12 @@ UsersRouter.post('/', async (request, response) => {
           role
         )
         VALUES (
-          ${name},
+          ${first_name},
+          ${last_name},
           ${username},
           ${passwordHash},
           ${email},
-          ${phoneNumber},
+          ${phone_number},
           false,
           false,
           ${role}

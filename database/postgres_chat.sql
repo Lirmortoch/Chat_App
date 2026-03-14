@@ -63,6 +63,7 @@ CREATE TABLE chat.chat_avatars (
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	chat_id int4 NOT NULL,
 	file_type varchar(25) NOT NULL,
+	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT chat_avatars_pk PRIMARY KEY (id),
 	CONSTRAINT chat_avatars_unique UNIQUE (file_url),
 	CONSTRAINT chat_avatars_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id) ON DELETE CASCADE
@@ -191,6 +192,7 @@ CREATE TABLE chat.user_profile_photos (
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	user_id int4 NOT NULL,
 	file_type varchar(25) NOT NULL,
+	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT user_photos_pk PRIMARY KEY (id),
 	CONSTRAINT user_photos_unique UNIQUE (file_url),
 	CONSTRAINT user_photos_user_fk FOREIGN KEY (user_id) REFERENCES chat.users(id) ON DELETE CASCADE
