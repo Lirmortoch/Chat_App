@@ -6,7 +6,7 @@ const parsePhoneNumber = require('libphonenumber-js');
 const userSchema = Joi.object({
   first_name: Joi.string().min(3).max(128),
   username: Joi.string().min(5).max(45),
-  password: Joi.string().pattern(new RegExp('')),
+  password: Joi.string().pattern(new RegExp('[\W\w]{4,30}')),
   repeated_password: Joi.ref('password'),
   email: Joi.string().email(), 
 	phone_number: Joi.string(),
