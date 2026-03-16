@@ -1,21 +1,9 @@
 const bcrypt = require('bcrypt');
 const UsersRouter = require('express').Router();
-const Joi = require('joi');
 const parsePhoneNumber = require('libphonenumber-js');
 
-const userSchema = Joi.object({
-  first_name: Joi.string().min(3).max(128),
-  username: Joi.string().min(5).max(45),
-  password: Joi.string().pattern(new RegExp('[\W\w]{4,30}')),
-  repeated_password: Joi.ref('password'),
-  email: Joi.string().email(), 
-	phone_number: Joi.string(),
-	role: Joi.string().valid('admin', 'user', 'owner').default('user'), 
-	last_name: Joi.string().min(3).max(128),
-	user_about: Joi.string().min(3).max(128),
-});
-
 const postgreSql = require('../db.js');
+const userSchema = require('../validation/schemas/user.schema.js');
 
 const config = require('../utils/config.js');
 const { fieldWhiteList } = require('../utils/middleware.js');
@@ -78,7 +66,8 @@ UsersRouter.post('/', async (request, response) => {
       phone_number,
       role,
       last_name,
-      user_about
+      user_about,
+      avatar,
     });
 
     if (!first_name || !username || !password || !email || !role || !repeated_password) {

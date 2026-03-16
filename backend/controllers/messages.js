@@ -1,6 +1,7 @@
 const MessagesRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
+const messageSchema = require('../validation/schemas/message.schema.js');
 const { checkChatAccess, checkMessageAccess, fieldWhiteList } = require('../utils/middleware.js');
 
 MessagesRouter.get('/', async (request, response) => {
@@ -104,6 +105,15 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
     const chatId = request.chatInternalId;
     const sender_id = request.user.id;
 
+    const messageIsValid = messageSchema.validate({
+      message,
+      additionals,
+    });
+
+    if (messageIsValid.error !== undefined) {
+      response.status(400).json({ message: user.error });
+    }
+
     const insertedMessage = await postgreSql.begin(async (sql) => {
       const [chat] = await sql`SELECT id FROM chat.chats WHERE public_id = ${chatId}`;
 
@@ -143,6 +153,7 @@ MessagesRouter.put(
       
       const updatedMessage = await postgreSql.begin(async (sql) => {
         let uptMessage;
+        let returnMsg;
 
         if (field === 'message') {
           [uptMessage] = await sql`
@@ -152,22 +163,30 @@ MessagesRouter.put(
             WHERE id = ${messageInternalId}
             RETURNING message, edited_at, public_id
           `;
+
+          returnMsg = uptMessage;
         }
         else if (field === 'additional') {
-          [uptMessage] = await sql`
+          let [uptAdditional] = await sql`
             UPDATE chat.additionals
             SET file_url = ${fieldData.file_url}
             SET file_type = ${fieldData.file_type}
-            SET edited_at = now()
             WHERE message_id = ${messageInternalId}
             RETURNING file_url, file_type, public_id
           `;
+          [uptMessage] = await sql`
+            UPDATE chat.messages
+            SET edited_at = now()
+            RETURNING edited_at
+          `;
+
+          returnMsg = {uptAdditional, uptMessage}
         }
         else {
           response.status(400).json({ message: 'Invalid field' });
         }
 
-        return uptMessage;
+        return returnMsg;
       });
 
       response.status(201).json(updatedMessage);

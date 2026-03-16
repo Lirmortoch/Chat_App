@@ -1,18 +1,11 @@
 const ContactsRouter = require('express').Router();
-const Joi = require('joi');
 const parsePhoneNumber = require('libphonenumber-js');
 
 const postgreSql = require('../db.js');
+const contactSchema = require('../validation/schemas/contact.schema.js');
 
 // const config = require('../utils/config.js');
 const { fieldWhiteList } = require('../utils/middleware.js');
-
-const contactSchema = Joi.object({
-  first_name: Joi.string().min(3).max(128),
-  email: Joi.string().email(), 
-  phone_number: Joi.string(),
-  last_name: Joi.string().min(3).max(128),
-});
 
 ContactsRouter.get('/', async (request, response) => {
   try {
