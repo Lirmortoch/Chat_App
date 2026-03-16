@@ -57,7 +57,7 @@ UsersRouter.post('/', async (request, response) => {
   try {
     const { first_name, last_name, username, password, email, phone_number, role, avatar, repeated_password, user_about } = request.body;
 
-    const user = userSchema.validate({
+    const validateUser = userSchema.validate({
       first_name,
       username,
       password,
@@ -73,8 +73,8 @@ UsersRouter.post('/', async (request, response) => {
     if (!first_name || !username || !password || !email || !role || !repeated_password) {
       response.status(400).json({ message: "Missing required field" });
     }
-    else if (user.error !== undefined) {
-      response.status(400).json({ message: user.error });
+    else if (validateUser.error !== undefined) {
+      response.status(400).json({ message: validateUser.error });
     }
     else if (phone_number !== undefined) {
       const parsed_phone_number = parsePhoneNumber(phone_number);
@@ -118,7 +118,7 @@ UsersRouter.post('/', async (request, response) => {
       if (avatar) {
         [usersAvatar] = await sql`
           INSERT INTO chat.user_profile_photos (file_type, file_url, user_id)
-          ${sql({...avatar, user_id: usersData.id})}
+          ${sql({...avatar, user_id: usersData.id, is_main: avatar.is_main})}
           RETURNING file_url, file_type, created_at, is_main
         `;
       }
@@ -138,34 +138,36 @@ UsersRouter.post('/', async (request, response) => {
 
 UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
   try {
-    const { field, fieldData } = request.body;
+    const { fields, fieldsData } = request.body;
+    const updatedUserData = [];
 
-    const updatedUser = await postgreSql.begin(async (sql) => {
+    fields.forEach(async (field) => {
+      const updatedUser = await postgreSql.begin(async (sql) => {
       let updatedData;
 
       if (field === 'avatar') {
         [updatedData] = await sql`
           UPDATE chat.user_profile_photos 
-          SET file_type, file_url, created_at
-          ${sql({...fieldData, is_main: fieldData.is_main})}
+          SET file_type = ${fieldsData[field].file_type}, 
+          file_url = ${fieldsData[field].file_url}, 
+          is_main = ${fieldsData[field].is_main}
           RETURNING file_type, file_url, is_main
         `;
       }
-      else if (field === 'message' || field === 'additional') {
-        response.status(400).json({ message: 'Invalid field' });
-      }
-      else {
+      else if (field !== 'message' && field !== 'additional' && field !== 'avatar') {
         [updatedData] = await sql`
           UPDATE chat.users
-          SET ${field} = ${fieldData}
+          SET ${field} = ${fieldsData[field]}
           RETURNING ${field}
         `;
       }
+        return updatedData;
+      });
 
-      return updatedData;
+      updatedUserData.push({field, updatedUser});
     });
 
-    response.status(201).json(updatedUser);
+    response.status(201).json(updatedUserData);
   } catch (error) {
     console.log(error);
     response.status(500).json({ message: `Internal server error` });
@@ -174,10 +176,12 @@ UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
 
 UsersRouter.delete('/:public_id', async (request, response) => {
   try {
+    const user_id = request.user.id;
+
     const deletedUser = await postgreSql.begin(async (sql) => {
       const [delUser] = await sql`
         DELETE from chat.users 
-        WHERE public_id = ${request.params.public_id}
+        WHERE id = ${user_id}
         RETURNING email, name, phone_number, username, role, deleted, restricted
       `;
 
@@ -191,7 +195,7 @@ UsersRouter.delete('/:public_id', async (request, response) => {
       if (avatars && avatars.length !== 0) {
         delAvatars = await sql`
           DELETE from chat.user_profile_photos
-          WHERE user_id = (SELECT if FROM chat.users WHERE public_id = ${request.params.public_id})
+          WHERE user_id = ${user_id}
           RETURNING file_url, file_type, is_main, created_at
         `;
       }

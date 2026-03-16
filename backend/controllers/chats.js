@@ -1,6 +1,7 @@
 const ChatsRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
+const chatSchema = require('../validation/schemas/chat.schema.js');
 const { checkChatAccess, fieldWhiteList } = require('../utils/middleware.js');
 
 ChatsRouter.get('/', async (request, response) => {
@@ -111,6 +112,15 @@ ChatsRouter.post('/', async (request, response) => {
     const { recipient_public_id, type, name } = request.body;
     const creator_id = request.user.id;
 
+    const validateChat = chatSchema.validate({
+      name,
+      type,
+    });
+
+    if (validateChat.error !== undefined) {
+      response.status(400).json({ message: validateChat.error });
+    }
+
     const insertedChat = await postgreSql.begin(async (sql) => {
       const [recipient] = await sql`
         SELECT id FROM chat.users WHERE public_id = ${recipient_public_id}
@@ -120,23 +130,21 @@ ChatsRouter.post('/', async (request, response) => {
         throw new Error('User not found');
       }
 
-      if (type === 'private') {
-        const [existingChat] = await sql`
-          SELECT c.public_id, c.name, c.type
-          FROM chat.chats c
-          JOIN chat.chats_members cm1 ON c.id = cm1.chat_id
-          JOIN chat.chats_members cm2 ON c.id = cm2.chat_id
-          WHERE c.type = 'private'
-            AND cm1.user_id = ${creator_id}
-            AND cm2.user_id = ${recipient.id}
-          LIMIT 1
-        `;
+      const [existingChat] = await sql`
+        SELECT c.public_id, c.name, c.type
+        FROM chat.chats c
+        JOIN chat.chats_members cm1 ON c.id = cm1.chat_id
+        JOIN chat.chats_members cm2 ON c.id = cm2.chat_id
+        WHERE c.type = 'private'
+          AND cm1.user_id = ${creator_id}
+          AND cm2.user_id = ${recipient.id}
+        LIMIT 1
+      `;
 
-        if (existingChat) {
-          return existingChat;
-        }
+      if (existingChat) {
+        return existingChat;
       }
-
+      
       const [newChat] = await sql`
         INSERT INTO chat.chats (name, type)
         VALUES (${name || 'Private Chat'}, ${type})

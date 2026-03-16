@@ -55,13 +55,13 @@ ContactsRouter.get('/:public_id', async (request, response) => {
 });
 ContactsRouter.get('/user/:public_id', async (request, response) => {
   try {
-    const userId = request.user.id;
+    const user_id = request.user.id;
 
     const contacts = await postgreSql.begin(async (sql) => {
       const contactsData = await sql`
         SELECT phone_number, email, first_name, last_name, created_at, public_id, user_id
         FROM chat.contacts
-        WHERE owner_id = ${userId}
+        WHERE owner_id = ${user_id}
       `;
 
       const contactsAvatars = [];
@@ -94,7 +94,7 @@ ContactsRouter.post('/', async (request, response) => {
     const { first_name, last_name, phone_number, email, user_public_id } = request.body;
     const ownerId = request.user.id;
 
-    const contact = contactSchema.validate({
+    const validateContact = contactSchema.validate({
       first_name,
       email,
       phone_number,
@@ -104,8 +104,8 @@ ContactsRouter.post('/', async (request, response) => {
     if (!first_name || !email) {
       response.status(400).json({ message: "Missing required field" });
     }
-    else if (contact.error !== undefined) {
-      response.status(400).json({ message: user.error });
+    else if (validateContact.error !== undefined) {
+      response.status(400).json({ message: validateContact.error });
     }
     else if (phone_number !== undefined) {
       const parsed_phone_number = parsePhoneNumber(phone_number);
@@ -145,15 +145,20 @@ ContactsRouter.post('/', async (request, response) => {
 
 ContactsRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
   try {
-    const { field, fieldData } = request.body;
+    const { fields, fieldsData } = request.body;
+    const updatedContact = [];
 
-    const updatedContact = await postgreSql`
-      UPDATE chat.contacts
-      SET ${field} = ${fieldData}
-      WHERE public_id = ${request.params.public_id}
-      RETURNING ${field}
-    `;
-
+    fields.forEach(async (field) => {
+      const [uptContact] = await postgreSql`
+        UPDATE chat.contacts
+        SET ${field} = ${fieldsData[field]}
+        WHERE public_id = ${request.params.public_id}
+        RETURNING ${field}
+      `;
+      
+      updatedContact.push({field, uptContact});
+    });
+    
     response.status(201).json(updatedContact);
   }
   catch (error) {

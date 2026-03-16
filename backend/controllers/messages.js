@@ -105,13 +105,13 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
     const chatId = request.chatInternalId;
     const sender_id = request.user.id;
 
-    const messageIsValid = messageSchema.validate({
+    const validateMessage = messageSchema.validate({
       message,
       additionals,
     });
 
-    if (messageIsValid.error !== undefined) {
-      response.status(400).json({ message: user.error });
+    if (validateMessage.error !== undefined) {
+      response.status(400).json({ message: validateMessage.error });
     }
 
     const insertedMessage = await postgreSql.begin(async (sql) => {
@@ -150,7 +150,6 @@ MessagesRouter.put(
       const { field, fieldData } = request.body;
       const messageInternalId = request.messageInternalId;
       
-      
       const updatedMessage = await postgreSql.begin(async (sql) => {
         let uptMessage;
         let returnMsg;
@@ -159,7 +158,7 @@ MessagesRouter.put(
           [uptMessage] = await sql`
             UPDATE chat.messages
             SET message = ${fieldData},
-            SET edited_at = now()
+            edited_at = now()
             WHERE id = ${messageInternalId}
             RETURNING message, edited_at, public_id
           `;
@@ -169,8 +168,8 @@ MessagesRouter.put(
         else if (field === 'additional') {
           let [uptAdditional] = await sql`
             UPDATE chat.additionals
-            SET file_url = ${fieldData.file_url}
-            SET file_type = ${fieldData.file_type}
+            SET file_url = ${fieldData.file_url},
+            file_type = ${fieldData.file_type}
             WHERE message_id = ${messageInternalId}
             RETURNING file_url, file_type, public_id
           `;
@@ -274,7 +273,7 @@ MessagesRouter.delete('/chat/:chat_public_id', checkChatAccess, async (request, 
         if (msgAdditionals && msgAdditionals.length !== 0) {
           const delAdds = await sql`
             DELETE FROM chat.additionals
-            WHERE message_id = ${msg.id}
+            WHERE message_id = (SELECT id FROM chat.messages WHERE public_id = ${msg.public_id})
             RETURNING public_id, file_url, file_type, created_at
           `;
 
