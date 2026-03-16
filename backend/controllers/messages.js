@@ -176,6 +176,7 @@ MessagesRouter.put(
           [uptMessage] = await sql`
             UPDATE chat.messages
             SET edited_at = now()
+            WHERE id = ${messageInternalId}
             RETURNING edited_at
           `;
 

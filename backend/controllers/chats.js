@@ -176,18 +176,19 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, async (request, 
   }
 
   try {
-    const { field, fieldData } = request.body;
+    const { fieldsData } = request.body;
     const chatId = request.chatInternalId;
+    const fields = request.fields;
 
-    if (field !== 'name') {
-      response.status(400).json({ message: 'Invalid field' });
+    if (fields.length > 1) {
+      response.status(400).json({ message: 'Invalid fields' });
     }
 
-    const updatedChat = await postgreSql`
+    const [updatedChat] = await postgreSql`
       UPDATE chats
-      SET name = ${fieldData},
+      SET name = ${fieldsData.name},
       WHERE id = ${chatId}
-      RETURNING public_id
+      RETURNING name
     `;
 
     response.status(201).json(updatedChat);

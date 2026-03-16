@@ -138,36 +138,43 @@ UsersRouter.post('/', async (request, response) => {
 
 UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
   try {
-    const { fields, fieldsData } = request.body;
-    const updatedUserData = [];
+    const { fieldsData } = request.body;
+    const user_id = request.user.id;
+    const fields = request.fields;
 
-    fields.forEach(async (field) => {
-      const updatedUser = await postgreSql.begin(async (sql) => {
-      let updatedData;
+    const validateUser = userSchema.validate(fieldsData);
 
-      if (field === 'avatar') {
-        [updatedData] = await sql`
-          UPDATE chat.user_profile_photos 
-          SET file_type = ${fieldsData[field].file_type}, 
-          file_url = ${fieldsData[field].file_url}, 
-          is_main = ${fieldsData[field].is_main}
-          RETURNING file_type, file_url, is_main
+    if (validateUser.error !== undefined) {
+      response.status(400).json({ message: validateUser.error });
+    }
+
+    const updatedUser = await postgreSql.begin(async (sql) => {
+      const cols = fields.filter(f => f !== 'avatar');
+
+      const [uptUser] = await sql`
+        UPDATE chat.users
+        SET ${sql(fieldsData, cols)}
+        WHERE id = ${user_id}
+        RETURNING ${cols}
+      `;
+
+      let uptUserAvatar = null;
+      if (fields.includes('avatar') && fieldsData.avatar) {
+        [uptUserAvatar] = await sql`
+          UPDATE chat.user_profile_photos
+          SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
+          WHERE user_id = ${user_id}
+          RETURNING file_url, file_type, is_main
         `;
       }
-      else if (field !== 'message' && field !== 'additional' && field !== 'avatar') {
-        [updatedData] = await sql`
-          UPDATE chat.users
-          SET ${field} = ${fieldsData[field]}
-          RETURNING ${field}
-        `;
-      }
-        return updatedData;
-      });
 
-      updatedUserData.push({field, updatedUser});
+      return {
+        uptUser,
+        uptUserAvatar,
+      }
     });
 
-    response.status(201).json(updatedUserData);
+    response.status(201).json(updatedUser);
   } catch (error) {
     console.log(error);
     response.status(500).json({ message: `Internal server error` });

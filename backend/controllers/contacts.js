@@ -145,19 +145,28 @@ ContactsRouter.post('/', async (request, response) => {
 
 ContactsRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
   try {
-    const { fields, fieldsData } = request.body;
-    const updatedContact = [];
+    const { fieldsData } = request.body;
+    const fields = request.fields;
 
-    fields.forEach(async (field) => {
-      const [uptContact] = await postgreSql`
-        UPDATE chat.contacts
-        SET ${field} = ${fieldsData[field]}
-        WHERE public_id = ${request.params.public_id}
-        RETURNING ${field}
-      `;
+    const validateContact = contactSchema.validate(fieldsData);
+
+    if (validateContact.error !== undefined) {
+      response.status(400).json({ message: validateContact.error });
+    }
+    else if (fieldsData.phone_number !== undefined) {
+      const parsed_phone_number = parsePhoneNumber(fieldsData.phone_number);
       
-      updatedContact.push({field, uptContact});
-    });
+      if (!parsed_phone_number.isValid() || !parsed_phone_number.isPossible()) {
+        response.status(400).json({ message: "Phone number is wrong. Enter again" });
+      }
+    }
+
+    const [updatedContact] = await postgreSql`
+      UPDATE chat.contacts
+      SET ${sql(fieldsData, fields)}
+      WHERE public_id = ${request.params.public_id}
+      RETURNING ${fields}
+    `;
     
     response.status(201).json(updatedContact);
   }

@@ -58,11 +58,20 @@ const checkMessageAccess = async (request, response, next) => {
 const fieldWhiteList = (request, response, next) => {
   const list = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additional', 'user_about'];
 
-  const field = request.body;
+  const { fieldsData } = request.body;
 
-  if (!list.includes(field)) {
-    response.status(400).json({ message: 'Invalid field' });
+  const fields = Object.keys(fieldsData);
+  if (fields.length === 0) {
+    return response.status(400).json({ message: "No valid fields to update" });
   }
+
+  fields.forEach(field => {
+    if (!list.includes(field)) {
+      response.status(400).json({ message: 'Invalid field' });
+    }
+  });
+
+  request.fields = fields;
 
   next();
 };

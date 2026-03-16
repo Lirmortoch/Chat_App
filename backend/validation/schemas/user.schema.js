@@ -10,7 +10,12 @@ const userSchema = Joi.object({
 	role: Joi.string().valid('admin', 'user', 'owner').default('user'), 
 	last_name: Joi.string().min(3).max(128),
 	user_about: Joi.string().min(3).max(128),
-  avatar: Joi.any(),
+  
+  avatar: Joi.object({
+    file_url: Joi.string(),
+    file_type: Joi.string(),
+    is_main: Joi.bool(),
+  }),
 });
 
 module.exports = userSchema;
