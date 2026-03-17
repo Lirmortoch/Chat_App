@@ -101,7 +101,7 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
   }
 
   try {
-    const { message, additionals } = request.body;
+    const { message, additionals } = request.body.fieldsData;
     const chatId = request.chatInternalId;
     const sender_id = request.user.id;
 

@@ -1,12 +1,12 @@
 const bcrypt = require('bcrypt');
 const UsersRouter = require('express').Router();
-const parsePhoneNumber = require('libphonenumber-js');
 
 const postgreSql = require('../db.js');
 const userSchema = require('../validation/schemas/user.schema.js');
 
 const config = require('../utils/config.js');
 const { fieldWhiteList } = require('../utils/middleware.js');
+const { validator } = require('../validation/utils/middleware.js');
 
 UsersRouter.get('/', async (request, response) => {
   try {
@@ -53,35 +53,12 @@ UsersRouter.get('/:public_id', async (request, response) => {
 UsersRouter.get('/restricted/:public_id', async (request, response) => {});
 UsersRouter.get('/deleted/:public_id', async (request, response) => {});
 
-UsersRouter.post('/', async (request, response) => {
+UsersRouter.post('/', fieldWhiteList, validator(userSchema), async (request, response) => {
   try {
-    const { first_name, last_name, username, password, email, phone_number, role, avatar, repeated_password, user_about } = request.body;
-
-    const validateUser = userSchema.validate({
-      first_name,
-      username,
-      password,
-      repeated_password,
-      email,
-      phone_number,
-      role,
-      last_name,
-      user_about,
-      avatar,
-    });
+    const { first_name, last_name, username, password, email, phone_number, role, avatar, repeated_password, user_about } = request.body.fieldsData;
 
     if (!first_name || !username || !password || !email || !role || !repeated_password) {
-      response.status(400).json({ message: "Missing required field" });
-    }
-    else if (validateUser.error !== undefined) {
-      response.status(400).json({ message: validateUser.error });
-    }
-    else if (phone_number !== undefined) {
-      const parsed_phone_number = parsePhoneNumber(phone_number);
-      
-      if (!parsed_phone_number.isValid() || !parsed_phone_number.isPossible()) {
-        response.status(400).json({ message: "Phone number is wrong. Enter again" });
-      }
+      return response.status(400).json({ message: "Missing required field" });
     }
 
     const saltRounds = config.SALT_ROUNDS;
@@ -97,7 +74,8 @@ UsersRouter.post('/', async (request, response) => {
           phone_number,
           deleted,
           restricted,
-          role
+          role,
+          user_about
         )
         VALUES (
           ${first_name},
@@ -108,13 +86,13 @@ UsersRouter.post('/', async (request, response) => {
           ${phone_number},
           false,
           false,
-          ${role}
+          ${role},
+          ${user_about}
         )
-        RETURNING public_id, email, name, phone_number, username, role, id
+        RETURNING public_id, email, name, phone_number, username, role, id, user_about
       `;
 
       let usersAvatar;
-
       if (avatar) {
         [usersAvatar] = await sql`
           INSERT INTO chat.user_profile_photos (file_type, file_url, user_id)
@@ -136,17 +114,11 @@ UsersRouter.post('/', async (request, response) => {
   }
 });
 
-UsersRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
+UsersRouter.put('/:public_id', fieldWhiteList, validator(userSchema), async (request, response) => {
   try {
     const { fieldsData } = request.body;
     const user_id = request.user.id;
     const fields = request.fields;
-
-    const validateUser = userSchema.validate(fieldsData);
-
-    if (validateUser.error !== undefined) {
-      response.status(400).json({ message: validateUser.error });
-    }
 
     const updatedUser = await postgreSql.begin(async (sql) => {
       const cols = fields.filter(f => f !== 'avatar');

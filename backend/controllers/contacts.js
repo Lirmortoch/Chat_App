@@ -1,11 +1,11 @@
 const ContactsRouter = require('express').Router();
-const parsePhoneNumber = require('libphonenumber-js');
 
 const postgreSql = require('../db.js');
 const contactSchema = require('../validation/schemas/contact.schema.js');
 
 // const config = require('../utils/config.js');
 const { fieldWhiteList } = require('../utils/middleware.js');
+const { validator } = require('../validation/utils/middleware.js');
 
 ContactsRouter.get('/', async (request, response) => {
   try {
@@ -43,7 +43,7 @@ ContactsRouter.get('/:public_id', async (request, response) => {
     });
 
     if (!contact) {
-      response.status(404).json({ message: 'Contact not found' });
+      return response.status(404).json({ message: 'Contact not found' });
     }
 
     response.json(contact);
@@ -57,29 +57,26 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const contacts = await postgreSql.begin(async (sql) => {
-      const contactsData = await sql`
-        SELECT phone_number, email, first_name, last_name, created_at, public_id, user_id
-        FROM chat.contacts
-        WHERE owner_id = ${user_id}
-      `;
+    const contacts = await postgreSql`
+      SELECT 
+        c.*, 
+        CASE 
+          WHEN p.id IS NOT NULL THEN 
+            json_build_object(
+              'url', p.file_url,
+              'type', p.file_type,
+              'is_main', p.is_main
+            )
+          ELSE null 
+        END AS avatar
+      FROM chat.contacts c
+      LEFT JOIN chat.user_profile_photos p ON c.user_id = p.user_id AND p.is_main = true
+      WHERE c.owner_id = ${user_id}
+    `;
 
-      const contactsAvatars = [];
-      contactsData.foeEach(async (contact) => {
-        const contactAvatar = await sql`
-          SELECT file_url, file_type, is_main, created_at
-          FROM chat.user_profile_photos
-          WHERE user_id = ${contact.user_id}
-            AND is_main = true
-        `;
-        contactsAvatars.push(contactAvatar);
-      });
-
-      return {
-        contactsData,
-        contactsAvatars,
-      }
-    });
+    if (!contacts) {
+      return response.status(404).json({ message: 'Contacts not found' });
+    }
 
     response.json(contacts);
   }
@@ -89,30 +86,13 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
   }
 });
 
-ContactsRouter.post('/', async (request, response) => {
+ContactsRouter.post('/', fieldWhiteList, validator(contactSchema), async (request, response) => {
   try {
-    const { first_name, last_name, phone_number, email, user_public_id } = request.body;
+    const { first_name, last_name, phone_number, email, user_public_id } = request.body.fieldsData;
     const ownerId = request.user.id;
 
-    const validateContact = contactSchema.validate({
-      first_name,
-      email,
-      phone_number,
-      last_name,
-    });
-
     if (!first_name || !email) {
-      response.status(400).json({ message: "Missing required field" });
-    }
-    else if (validateContact.error !== undefined) {
-      response.status(400).json({ message: validateContact.error });
-    }
-    else if (phone_number !== undefined) {
-      const parsed_phone_number = parsePhoneNumber(phone_number);
-      
-      if (!parsed_phone_number.isValid() || !parsed_phone_number.isPossible()) {
-        response.status(400).json({ message: "Phone number is wrong. Enter again" });
-      }
+      return response.status(400).json({ message: "Missing required field" });
     }
 
     const insertedContact = await postgreSql`
@@ -143,23 +123,10 @@ ContactsRouter.post('/', async (request, response) => {
   }
 });
 
-ContactsRouter.put('/:public_id', fieldWhiteList, async (request, response) => {
+ContactsRouter.put('/:public_id', fieldWhiteList, validator(contactSchema), async (request, response) => {
   try {
     const { fieldsData } = request.body;
     const fields = request.fields;
-
-    const validateContact = contactSchema.validate(fieldsData);
-
-    if (validateContact.error !== undefined) {
-      response.status(400).json({ message: validateContact.error });
-    }
-    else if (fieldsData.phone_number !== undefined) {
-      const parsed_phone_number = parsePhoneNumber(fieldsData.phone_number);
-      
-      if (!parsed_phone_number.isValid() || !parsed_phone_number.isPossible()) {
-        response.status(400).json({ message: "Phone number is wrong. Enter again" });
-      }
-    }
 
     const [updatedContact] = await postgreSql`
       UPDATE chat.contacts

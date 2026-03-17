@@ -67,7 +67,7 @@ const fieldWhiteList = (request, response, next) => {
 
   fields.forEach(field => {
     if (!list.includes(field)) {
-      response.status(400).json({ message: 'Invalid field' });
+      return response.status(400).json({ message: 'Invalid field' });
     }
   });
 

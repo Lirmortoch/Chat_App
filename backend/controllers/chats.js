@@ -3,6 +3,7 @@ const ChatsRouter = require('express').Router();
 const postgreSql = require('../db.js');
 const chatSchema = require('../validation/schemas/chat.schema.js');
 const { checkChatAccess, fieldWhiteList } = require('../utils/middleware.js');
+const { validator } = require('../validation/utils/middleware.js');
 
 ChatsRouter.get('/', async (request, response) => {
   try {
@@ -25,14 +26,17 @@ ChatsRouter.get('/info/:public_id', checkChatAccess, async (request, response) =
   try {
     const chatId = request.chatInternalId;
 
-    const [chat] = await postgreSql`
-      SELECT name, url, type, public_id
-      FROM chats
-      WHERE id = ${chatId}
-    `;
+    const chat = await postgreSql.begin(async (sql) => {
+      const [chatData] = await sql`
+        SELECT name, url, type, public_id
+        FROM chats
+        WHERE id = ${chatId}
+      `;
+      const [chatAvatar] = await sql``;
+    });
 
     if (!chat) {
-      response.status(404).json({ message: 'Message not found' });
+      return response.status(404).json({ message: 'Message not found' });
     }
 
     response.json(chat);
@@ -107,19 +111,10 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
   }
 });
 
-ChatsRouter.post('/', async (request, response) => {
+ChatsRouter.post('/', fieldWhiteList, validator(chatSchema), async (request, response) => {
   try {
-    const { recipient_public_id, type, name } = request.body;
+    const { recipient_public_id, type, name } = request.body.fieldsData;
     const creator_id = request.user.id;
-
-    const validateChat = chatSchema.validate({
-      name,
-      type,
-    });
-
-    if (validateChat.error !== undefined) {
-      response.status(400).json({ message: validateChat.error });
-    }
 
     const insertedChat = await postgreSql.begin(async (sql) => {
       const [recipient] = await sql`
@@ -168,7 +163,7 @@ ChatsRouter.post('/', async (request, response) => {
   }
 });
 
-ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, async (request, response) => {
+ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, validator(chatSchema), async (request, response) => {
   if (request.userRoleInChat !== 'owner' || request.userRoleInChat !== 'admin') {
     return response
       .status(403)
@@ -178,11 +173,6 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, async (request, 
   try {
     const { fieldsData } = request.body;
     const chatId = request.chatInternalId;
-    const fields = request.fields;
-
-    if (fields.length > 1) {
-      response.status(400).json({ message: 'Invalid fields' });
-    }
 
     const [updatedChat] = await postgreSql`
       UPDATE chats
