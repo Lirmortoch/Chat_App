@@ -5,6 +5,7 @@ const chatSchema = Joi.object({
   type: Joi.string().max(25).valid('private', 'channel', 'group'),
   // url: Joi.string(),
   recipient_public_id: Joi.string(),
+  avatar: Joi.any(),
 });
 
 module.exports = chatSchema;

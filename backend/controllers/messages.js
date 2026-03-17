@@ -3,6 +3,7 @@ const MessagesRouter = require('express').Router();
 const postgreSql = require('../db.js');
 const messageSchema = require('../validation/schemas/message.schema.js');
 const { checkChatAccess, checkMessageAccess, fieldWhiteList } = require('../utils/middleware.js');
+const { validator } = require('../validation/utils/middleware.js');
 
 MessagesRouter.get('/', async (request, response) => {
   try {
@@ -93,7 +94,7 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
   }
 });
 
-MessagesRouter.post('/', checkChatAccess, async (request, response) => {
+MessagesRouter.post('/', checkChatAccess, fieldWhiteList, validator(messageSchema), async (request, response) => {
   if (request.userRoleInChat === 'undefined') {
     return response.status(403).json({
       message: 'Only users with access can add messages to this chat',
@@ -102,35 +103,29 @@ MessagesRouter.post('/', checkChatAccess, async (request, response) => {
 
   try {
     const { message, additionals } = request.body.fieldsData;
-    const chatId = request.chatInternalId;
+    const chat_id = request.chatInternalId;
     const sender_id = request.user.id;
 
-    const validateMessage = messageSchema.validate({
-      message,
-      additionals,
-    });
-
-    if (validateMessage.error !== undefined) {
-      response.status(400).json({ message: validateMessage.error });
-    }
-
     const insertedMessage = await postgreSql.begin(async (sql) => {
-      const [chat] = await sql`SELECT id FROM chat.chats WHERE public_id = ${chatId}`;
-
       const [newMessage] = await sql`
         INSERT INTO chat.messages (chat_id, sender_id, message)
-        VALUES (${chat.id}, ${sender_id}, ${message})
-        RETURNING public_id, created_at
+        VALUES (${chat_id}, ${sender_id}, ${message})
+        RETURNING created_at, id, message
       `;
 
+      let newAdditionals = null;
       if (additionals && additionals.length > 0) {
-        await sql`
+        newAdditionals = await sql`
           INSERT INTO chat.additionals (file_type, file_url, message_id)
-          ${sql(additionals.map((a) => ({ ...a, message_id: `SELECT id FROM chat.messages WHERE public_id = ${newMessage.public_id}` })))}
+          ${sql(additionals.map((a) => ({ ...a, message_id: newMessage.id })))}
+          RETURNING file_type, file_url
         `;
       }
       
-      return newMessage;
+      return {
+        newMessage,
+        newAdditionals,
+      }
     });
 
     response.status(201).json(insertedMessage);
@@ -145,6 +140,7 @@ MessagesRouter.put(
   checkChatAccess,
   checkMessageAccess,
   fieldWhiteList,
+  validator(messageSchema),
   async (request, response) => {
     try {
       const { field, fieldData } = request.body;
@@ -224,7 +220,7 @@ MessagesRouter.delete(
           WHERE message_id = ${messageInternalId}
         `;
 
-        let deletedAdditionals;
+        let deletedAdditionals = null;
         if (messageAdditionals && messageAdditionals.length !== 0) {
           deletedAdditionals = await sql`
             DELETE from chat.additionals
@@ -246,52 +242,5 @@ MessagesRouter.delete(
     }
   },
 );
-MessagesRouter.delete('/chat/:chat_public_id', checkChatAccess, async (request, response) => {
-  if (request.userRoleInChat !== 'owner' || request.userRoleInChat !== 'admin') {
-    return response.status(403).json({
-      message: 'Only owners or admins can delete messages in this chat',
-    });
-  }
-
-  try {
-    const chatId = request.chatInternalId;
-
-    const delMsgs = await postgreSql.begin(async (sql) => {
-      const deletedMessages = await sql`
-        DELETE FROM chat.messages
-        WHERE chat_id = ${chatId}
-        RETURNING public_id, messages, created_at, edited_at
-      `;
-
-      const deletedAdditionals = [];
-      deletedMessages.forEach(async (msg) => {
-        const msgAdditionals = await sql`
-          SELECT file_url, file_type, public_id
-          FROM chat.additionals
-          WHERE message_id = (SELECT id FROM chat.messages WHERE public_id = ${msg.public_id})
-        `;
-
-        if (msgAdditionals && msgAdditionals.length !== 0) {
-          const delAdds = await sql`
-            DELETE FROM chat.additionals
-            WHERE message_id = (SELECT id FROM chat.messages WHERE public_id = ${msg.public_id})
-            RETURNING public_id, file_url, file_type, created_at
-          `;
-
-          deletedAdditionals.push(delAdds);
-        }
-
-        return {
-          deletedMessages,
-          deletedAdditionals,
-        }
-      });
-    });
-    response.json(delMsgs);
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
-  }
-});
 
 module.exports = MessagesRouter;

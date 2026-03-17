@@ -25,14 +25,31 @@ ChatsRouter.get('/info/:public_id', checkChatAccess, async (request, response) =
 
   try {
     const chatId = request.chatInternalId;
+    const user_id = request.user.id;
 
     const chat = await postgreSql.begin(async (sql) => {
       const [chatData] = await sql`
         SELECT name, url, type, public_id
-        FROM chats
+        FROM chat.chats
         WHERE id = ${chatId}
       `;
-      const [chatAvatar] = await sql``;
+      let chatAvatar = null;
+      if (chatData.type === 'private') {
+        [chatAvatar] = await sql`
+          SELECT file_url, file_type, created_at
+          FROM chat.contact_avatars
+          WHERE contact_id = (SELECT id FROM chat.contacts WHERE owner_id = ${user_id})
+           AND is_main = true
+        `;
+      }
+      else {
+        [chatAvatar] = await sql``;
+      }
+
+      return {
+        chatData,
+        chatAvatar
+      }
     });
 
     if (!chat) {

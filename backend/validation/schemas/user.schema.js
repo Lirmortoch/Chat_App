@@ -4,7 +4,7 @@ const parsePhoneNumber = require('libphonenumber-js');
 const userSchema = Joi.object({
   first_name: Joi.string().min(3).max(128),
   username: Joi.string().min(5).max(45),
-  password: Joi.string().pattern(new RegExp('[\W\w]{4,50}')),
+  password: Joi.string().min(12).max(50).pattern(new RegExp('^\S{4,50}$')),
   repeated_password: Joi.ref('password'),
   email: Joi.string().email(), 
 	phone_number: Joi.string().custom((value, helper) => {
@@ -14,7 +14,7 @@ const userSchema = Joi.object({
       return helper.message("Phone number is wrong. Enter again");
     }
   }),
-	role: Joi.string().valid('admin', 'user', 'owner').default('user'), 
+	role: Joi.string().valid('low-admin', 'med-admin', 'high-admin', 'user', 'owner').default('user'), 
 	last_name: Joi.string().min(3).max(128),
 	user_about: Joi.string().min(3).max(128),
   
