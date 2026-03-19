@@ -130,7 +130,7 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
 
 ChatsRouter.post('/', fieldWhiteList, validator(chatSchema), async (request, response) => {
   try {
-    const { recipient_public_id, type, name } = request.body.fieldsData;
+    const { recipient_public_id, type, name, avatar } = request.body.fieldsData;
     const creator_id = request.user.id;
 
     const insertedChat = await postgreSql.begin(async (sql) => {
@@ -142,19 +142,21 @@ ChatsRouter.post('/', fieldWhiteList, validator(chatSchema), async (request, res
         throw new Error('User not found');
       }
 
-      const [existingChat] = await sql`
-        SELECT c.public_id, c.name, c.type
-        FROM chat.chats c
-        JOIN chat.chats_members cm1 ON c.id = cm1.chat_id
-        JOIN chat.chats_members cm2 ON c.id = cm2.chat_id
-        WHERE c.type = 'private'
-          AND cm1.user_id = ${creator_id}
-          AND cm2.user_id = ${recipient.id}
-        LIMIT 1
-      `;
+      if (type === 'private') {
+        const [existingChat] = await sql`
+          SELECT c.public_id, c.name, c.type
+          FROM chat.chats c
+          JOIN chat.chats_members cm1 ON c.id = cm1.chat_id
+          JOIN chat.chats_members cm2 ON c.id = cm2.chat_id
+          WHERE c.type = 'private'
+            AND cm1.user_id = ${creator_id}
+            AND cm2.user_id = ${recipient.id}
+          LIMIT 1
+        `;
 
-      if (existingChat) {
-        return existingChat;
+        if (existingChat) {
+          return existingChat;
+        }
       }
       
       const [newChat] = await sql`
@@ -166,10 +168,21 @@ ChatsRouter.post('/', fieldWhiteList, validator(chatSchema), async (request, res
       const participants = [creator_id, recipient.id];
       await sql`
         INSERT INTO chat.chats_members (chat_id, user_id, role)
-        SELECT ${newChat.id}, unnest(${participants}::int[]), 'default'
+        SELECT ${newChat.id}, unnest(${participants}::int[]), 'user'
       `;
 
-      return newChat;
+      let newChatAvatar = null;
+      if (avatar) {
+        [newChatAvatar] = await sql`
+          INSERT INTO chat.chat_avatars (file_type, file_url, chat_id, is_main)
+          VALUES (${avatar.file_type}, ${avatar.file_url}, SELECT id FROM chat.chats WHERE public_id = ${newChat.public_id}, ${avatar.is_main})
+        `;
+      }
+
+      return {
+        newChat,
+        newChatAvatar,
+      }
     });
 
     response.status(201).json(insertedChat);
@@ -189,20 +202,43 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, validator(chatSc
 
   try {
     const { fieldsData } = request.body;
-    const chatId = request.chatInternalId;
+    const chat_id = request.chatInternalId;
+    const fields = request.fields;
 
-    const [updatedChat] = await postgreSql`
-      UPDATE chats
-      SET name = ${fieldsData.name},
-      WHERE id = ${chatId}
-      RETURNING name
-    `;
+    const [updatedChat] = await postgreSql.begin(async (sql) => {
+      const cols = fields.filter(f => f !== 'avatar');
+
+      const [updatedChatData] = await sql`
+        UPDATE chats
+        SET ${sql(fieldsData, cols)},
+        WHERE id = ${chat_id}
+        RETURNING name
+      `;
+
+      let updatedChatAvatar = null;
+      if (fields.includes('avatar') && fieldsData.avatar) {
+        [updatedChatAvatar] = await sql`
+          UPDATE chat.chat_avatars
+          SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
+          WHERE chat_id = ${chat_id}
+          RETURNING file_url, file_type, is_main, created_at, public_id
+        `;
+      }
+
+      return {
+        updatedChatData,
+        updatedChatAvatar
+      }
+    })
 
     response.status(201).json(updatedChat);
   } catch (error) {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
+});
+ChatsRouter.put('/permissions/chat/:public_id', checkChatAccess, fieldWhiteList, validator(chatSchema), async (request, response) => {
+
 });
 
 ChatsRouter.delete('/:public_id', checkChatAccess, async (request, response) => {

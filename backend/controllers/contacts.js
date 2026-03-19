@@ -25,7 +25,7 @@ ContactsRouter.get('/:public_id', async (request, response) => {
   try {
     const contact = await postgreSql.begin(async (sql) => {
       const [contactData] = await sql`
-        SELECT phone_number, email, first_name, last_name, created_at, user_id, id
+        SELECT phone_number, email, first_name, last_name, created_at, public_id
         FROM chat.contacts
         WHERE public_id = ${request.params.public_id}
       `;
@@ -33,7 +33,7 @@ ContactsRouter.get('/:public_id', async (request, response) => {
       let [contactAvatar] = await sql`
         SELECT file_url, file_type, created_at
         FROM chat.contact_avatars
-        WHERE id = ${contactData.id}
+        WHERE contact_id = (SELECT id FROM chat.contacts WHERE public_id = ${contactData.public_id})
           AND is_main = true
       `;
 
@@ -41,7 +41,7 @@ ContactsRouter.get('/:public_id', async (request, response) => {
         [contactAvatar] = await sql`
           SELECT file_url, file_type, created_at
           FROM chat.user_profile_photos
-          WHERE user_id = ${contactData.user_id}
+          WHERE user_id = (SELECT user_id FROM chat.contacts WHERE public_id = ${contactData.public_id})
             AND is_main = true
         `;
       }
@@ -138,33 +138,33 @@ ContactsRouter.put('/:public_id', fieldWhiteList, validator(contactSchema), asyn
     const { fieldsData } = request.body;
     const fields = request.fields;
 
-    const [updatedContact] = await postgreSql.begin(async (sql) => {
-      const cols = fields.filter(f => f !== 'avatar');
-
-      const [updatedContactData] = await sql`
-        UPDATE chat.contacts
-        SET ${sql(fieldsData, cols)}
-        WHERE public_id = ${request.params.public_id}
-        RETURNING ${cols.join('')}, id
-      `;
-
-      let updatedContactAvatar = null;
-      if (fields.includes('avatar') && fieldsData.avatar) {
-        [updatedContactAvatar] = await sql`
-          UPDATE chat.contact_avatars
-          SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
-          WHERE contact_id = ${updatedContact.id}
-          RETURNING file_url, file_type, is_main, created_at
-        `;
-      }
-
-      return {
-        updatedContactData,
-        updatedContactAvatar,
-      }
-    });
+    const cols = fields.filter(f => f !== 'avatar');
+    const [updatedContact] = await postgreSql`
+      UPDATE chat.contacts
+      SET ${sql(fieldsData, cols)}
+      WHERE public_id = ${request.params.public_id}
+      RETURNING ${cols.join('')}
+    `;
     
     response.status(201).json(updatedContact);
+  }
+  catch (error) {
+    console.log(error);
+    response.status(500).json({ message: 'Internal server error' });
+  }
+});
+ContactsRouter.put('/contact/avatar/:public_id', fieldWhiteList, validator(contactSchema), async (request, response) => {
+  try {
+    const { fieldsData } = request.body;
+
+    const [updatedAvatar] = await postgreSql`
+      UPDATE chat.contact_avatars
+      SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
+      WHERE contact_id = (SELECT id FROM chat.contacts WHERE public_id = ${contactData.public_id})
+      RETURNING file_url, file_type, is_main, created_at, public_id
+    `;
+
+    response.status(201).json(updatedAvatar);
   }
   catch (error) {
     console.log(error);

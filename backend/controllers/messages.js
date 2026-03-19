@@ -45,16 +45,13 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
 
   try {
     const chatId = request.chatInternalId;
-    const user_public_id = request.user.public_id;
+    const user_id = request.user.id;
 
     const messages = await postgreSql`
-      WITH user_info AS (
-          SELECT id FROM chat.users WHERE public_id = ${user_public_id}
-      ),
-      updated_member AS (
+      WITH updated_member AS (
           UPDATE chat.chats_members
           SET last_read_at = CURRENT_TIMESTAMP
-          WHERE user_id = (SELECT id FROM user_info)
+          WHERE user_id = ${user_id}
             AND chat_id = ${chatId}
           RETURNING chat_id
       )
@@ -83,7 +80,7 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
             SELECT 1 
             FROM chat.messages_hidden mh 
             WHERE mh.message_id = m.id 
-              AND mh.user_id = (SELECT id FROM user_info)
+              AND mh.user_id = ${user_id}
         )
       ORDER BY m.created_at ASC
     `;
@@ -110,15 +107,15 @@ MessagesRouter.post('/', checkChatAccess, fieldWhiteList, validator(messageSchem
       const [newMessage] = await sql`
         INSERT INTO chat.messages (chat_id, sender_id, message)
         VALUES (${chat_id}, ${sender_id}, ${message})
-        RETURNING created_at, id, message
+        RETURNING created_at, public_id, message
       `;
 
       let newAdditionals = null;
       if (additionals && additionals.length > 0) {
         newAdditionals = await sql`
           INSERT INTO chat.additionals (file_type, file_url, message_id)
-          ${sql(additionals.map((a) => ({ ...a, message_id: newMessage.id })))}
-          RETURNING file_type, file_url
+          ${sql(additionals.map((a) => ({ ...a, message_id: `SELECT id FROM chat.messages WHERE public_id = ${newMessage.public_id}` })))}
+          RETURNING file_type, file_url, public_id
         `;
       }
       
@@ -143,46 +140,46 @@ MessagesRouter.put(
   validator(messageSchema),
   async (request, response) => {
     try {
-      const { field, fieldData } = request.body;
+      const { fieldsData } = request.body;
+      const fields = request.fields;
       const messageInternalId = request.messageInternalId;
       
       const updatedMessage = await postgreSql.begin(async (sql) => {
-        let uptMessage;
-        let returnMsg;
+        let updatedMessageData;
+        let messageToReturn;
 
-        if (field === 'message') {
-          [uptMessage] = await sql`
+        if (fields.includes('message')) {
+          [updatedMessageData] = await sql`
             UPDATE chat.messages
-            SET message = ${fieldData},
+            SET message = ${fieldsData.message},
             edited_at = now()
             WHERE id = ${messageInternalId}
             RETURNING message, edited_at, public_id
           `;
 
-          returnMsg = uptMessage;
+          messageToReturn = updatedMessageData;
         }
-        else if (field === 'additional') {
-          let [uptAdditional] = await sql`
-            UPDATE chat.additionals
-            SET file_url = ${fieldData.file_url},
-            file_type = ${fieldData.file_type}
-            WHERE message_id = ${messageInternalId}
-            RETURNING file_url, file_type, public_id
+        
+        if (fields.includes('additionals') && fieldsData.additionals) {
+          let updatedAdditionals = await sql`
+            INSERT INTO chat.additionals (file_type, file_url, message_id)
+            ${sql(additionals.map((a) => ({ ...a, message_id: messageInternalId })))}
+            RETURNING file_type, file_url, public_id
           `;
-          [uptMessage] = await sql`
+          [updatedMessageData] = await sql`
             UPDATE chat.messages
             SET edited_at = now()
             WHERE id = ${messageInternalId}
-            RETURNING edited_at
+            RETURNING edited_at, public_id
           `;
 
-          returnMsg = {uptAdditional, uptMessage}
+          messageToReturn = {updatedAdditionals, updatedMessageData}
         }
         else {
           response.status(400).json({ message: 'Invalid field' });
         }
 
-        return returnMsg;
+        return messageToReturn;
       });
 
       response.status(201).json(updatedMessage);
@@ -208,7 +205,7 @@ MessagesRouter.delete(
       const messageInternalId = request.messageInternalId;
 
       const deletedMessage = await postgreSql.begin(async (sql) => {
-          const [deletedMessage] = await sql`
+          const [deletedMessageData] = await sql`
           DELETE from chat.messages
           WHERE id = ${messageInternalId}
           RETURNING message, public_id, created_at, edited_at
@@ -230,7 +227,7 @@ MessagesRouter.delete(
         }
 
         return {
-          deletedMessage,
+          deletedMessageData,
           deletedAdditionals,
         }
       });

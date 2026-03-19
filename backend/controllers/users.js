@@ -23,15 +23,17 @@ UsersRouter.get('/', async (request, response) => {
 });
 UsersRouter.get('/:public_id', async (request, response) => {
   try {
+    const user_id = request.user.id;
+
     const user = await postgreSql.begin(async (sql) => {
       const [userData] = await sql`
-        SELECT name, username, email, phone_number, created_at, deleted, restricted, role
-        FROM chat.users WHERE public_id = ${request.params.public_id}
+        SELECT name, username, email, phone_number, created_at, deleted, restricted, role, public_id
+        FROM chat.users WHERE public_id = ${user_id}
       `;
       const userAvatars = await sql`
-        SELECT file_url, file_type, is_main, created_at
+        SELECT file_url, file_type, is_main, created_at, public_id
         FROM chat.user_profile_photos
-        WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${request.params.public_id})
+        WHERE user_id = ${user_id}
       `;
 
       return {
@@ -50,8 +52,6 @@ UsersRouter.get('/:public_id', async (request, response) => {
     response.status(500).json({ message: `Internal server error` });
   }
 });
-UsersRouter.get('/restricted/:public_id', async (request, response) => {});
-UsersRouter.get('/deleted/:public_id', async (request, response) => {});
 
 UsersRouter.post('/', fieldWhiteList, validator(userSchema), async (request, response) => {
   try {
@@ -89,15 +89,15 @@ UsersRouter.post('/', fieldWhiteList, validator(userSchema), async (request, res
           ${role},
           ${user_about}
         )
-        RETURNING public_id, email, name, phone_number, username, role, id, user_about
+        RETURNING public_id, email, name, phone_number, username, role, user_about
       `;
 
       let usersAvatar = null;
       if (avatar) {
         [usersAvatar] = await sql`
           INSERT INTO chat.user_profile_photos (file_type, file_url, user_id)
-          ${sql({...avatar, user_id: usersData.id, is_main: avatar.is_main})}
-          RETURNING file_url, file_type, created_at, is_main
+          ${sql({...avatar, user_id: `SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`, is_main: avatar.is_main})}
+          RETURNING file_url, file_type, created_at, is_main, public_id
         `;
       }
 
@@ -127,7 +127,7 @@ UsersRouter.put('/:public_id', fieldWhiteList, validator(userSchema), async (req
         UPDATE chat.users
         SET ${sql(fieldsData, cols)}
         WHERE id = ${user_id}
-        RETURNING ${cols}
+        RETURNING ${cols}, public_id
       `;
 
       let updatedUserAvatar = null;
@@ -136,7 +136,7 @@ UsersRouter.put('/:public_id', fieldWhiteList, validator(userSchema), async (req
           UPDATE chat.user_profile_photos
           SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
           WHERE user_id = ${user_id}
-          RETURNING file_url, file_type, is_main, created_at
+          RETURNING file_url, file_type, is_main, created_at, public_id
         `;
       }
 
@@ -161,13 +161,13 @@ UsersRouter.delete('/:public_id', async (request, response) => {
       const [deletedUserData] = await sql`
         DELETE from chat.users 
         WHERE id = ${user_id}
-        RETURNING email, name, phone_number, username, role, deleted, restricted
+        RETURNING email, name, phone_number, username, role, deleted, restricted, public_id
       `;
 
       const avatars = await sql`
-        SELECT file_url, file_type, created_at, is_main, id
+        SELECT file_url, file_type, created_at, is_main, public_id
         FROM chat.user_profile_photos
-        WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${request.params.public_id})
+        WHERE user_id = ${user_id}
       `;
 
       let deletedUserAvatars;
@@ -175,7 +175,7 @@ UsersRouter.delete('/:public_id', async (request, response) => {
         deletedUserAvatars = await sql`
           DELETE from chat.user_profile_photos
           WHERE user_id = ${user_id}
-          RETURNING file_url, file_type, is_main, created_at
+          RETURNING file_url, file_type, is_main, created_at, public_id
         `;
       }
 
