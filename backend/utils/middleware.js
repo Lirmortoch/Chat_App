@@ -1,5 +1,14 @@
 const postgreSql = require('../db.js');
 
+const checkUserAccess = async (request, response, next) => {
+  try {
+
+  }
+  catch (error) {
+    console.error('Middleware Error:', error);
+    response.status(500).json({ message: 'Internal server error during access check' });
+  }
+}
 const checkChatAccess = async (request, response, next) => {
   try {
     const chat_public_id = request.params.chat_public_id || request.params.public_id;
@@ -55,25 +64,28 @@ const checkMessageAccess = async (request, response, next) => {
   }
 };
 
-const fieldWhiteList = (request, response, next) => {
-  const list = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about'];
+const adminList = ['restrict_reason', 'delete_reason', 'restrict', 'delete'];
+const userList = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about', 'description'];
 
-  const { fieldsData } = request.body;
+const fieldWhiteList = (list) => {
+  return (request, response, next) => {
+    const { fieldsData } = request.body;
 
-  const fields = Object.keys(fieldsData);
-  if (fields.length === 0) {
-    return response.status(400).json({ message: "No valid fields to update" });
-  }
-
-  fields.forEach(field => {
-    if (!list.includes(field)) {
-      return response.status(400).json({ message: 'Invalid field' });
+    const fields = Object.keys(fieldsData);
+    if (fields.length === 0) {
+      return response.status(400).json({ message: "No valid fields to update" });
     }
-  });
 
-  request.fields = fields;
+    fields.forEach(field => {
+      if (!list.includes(field)) {
+        return response.status(400).json({ message: 'Invalid field' });
+      }
+    });
 
-  next();
-};
+    request.fields = fields;
 
-module.exports = { checkChatAccess, checkMessageAccess, fieldWhiteList };
+    next();
+  }
+}
+
+module.exports = { checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList,  };

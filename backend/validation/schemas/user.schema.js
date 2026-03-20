@@ -19,6 +19,12 @@ const userSchema = Joi.object({
 	user_about: Joi.string().min(3).max(128),
   
   avatar: Joi.any(),
+
+  deleted: Joi.bool().default(false),
+  restricted: Joi.bool().default(false),
+
+  delete_reason: Joi.string(),
+  restrict_reason: Joi.string(),
 });
 
 module.exports = userSchema;

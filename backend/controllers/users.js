@@ -5,7 +5,7 @@ const postgreSql = require('../db.js');
 const userSchema = require('../validation/schemas/user.schema.js');
 
 const config = require('../utils/config.js');
-const { fieldWhiteList } = require('../utils/middleware.js');
+const { fieldWhiteList, userList, adminList } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
 UsersRouter.get('/', async (request, response) => {
@@ -53,7 +53,7 @@ UsersRouter.get('/:public_id', async (request, response) => {
   }
 });
 
-UsersRouter.post('/', fieldWhiteList, validator(userSchema), async (request, response) => {
+UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (request, response) => {
   try {
     const { first_name, last_name, username, password, email, phone_number, role, avatar, repeated_password, user_about } = request.body.fieldsData;
 
@@ -114,7 +114,7 @@ UsersRouter.post('/', fieldWhiteList, validator(userSchema), async (request, res
   }
 });
 
-UsersRouter.put('/:public_id', fieldWhiteList, validator(userSchema), async (request, response) => {
+UsersRouter.put('/:public_id', fieldWhiteList(userList), validator(userSchema), async (request, response) => {
   try {
     const { fieldsData } = request.body;
     const user_id = request.user.id;
@@ -151,6 +151,9 @@ UsersRouter.put('/:public_id', fieldWhiteList, validator(userSchema), async (req
     console.log(error);
     response.status(500).json({ message: `Internal server error` });
   }
+});
+UsersRouter.put('/permissions/user/:public_id', checkChatAccess, fieldWhiteList(adminList), validator(chatSchema), async (request, response) => {
+
 });
 
 UsersRouter.delete('/:public_id', async (request, response) => {

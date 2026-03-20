@@ -2,7 +2,7 @@ const ChatsRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
 const chatSchema = require('../validation/schemas/chat.schema.js');
-const { checkChatAccess, fieldWhiteList } = require('../utils/middleware.js');
+const { checkChatAccess, fieldWhiteList, userList, adminList } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
 ChatsRouter.get('/', async (request, response) => {
@@ -128,7 +128,7 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
   }
 });
 
-ChatsRouter.post('/', fieldWhiteList, validator(chatSchema), async (request, response) => {
+ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (request, response) => {
   try {
     const { recipient_public_id, type, name, avatar } = request.body.fieldsData;
     const creator_id = request.user.id;
@@ -193,7 +193,7 @@ ChatsRouter.post('/', fieldWhiteList, validator(chatSchema), async (request, res
   }
 });
 
-ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, validator(chatSchema), async (request, response) => {
+ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList(userList), validator(chatSchema), async (request, response) => {
   if (request.userRoleInChat !== 'owner' || request.userRoleInChat !== 'admin') {
     return response
       .status(403)
@@ -237,7 +237,7 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList, validator(chatSc
     response.status(500).json({ message: 'Internal server error' });
   }
 });
-ChatsRouter.put('/permissions/chat/:public_id', checkChatAccess, fieldWhiteList, validator(chatSchema), async (request, response) => {
+ChatsRouter.put('/permissions/chat/:public_id', checkChatAccess, fieldWhiteList(adminList), validator(chatSchema), async (request, response) => {
 
 });
 

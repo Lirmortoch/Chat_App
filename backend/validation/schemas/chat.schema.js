@@ -6,6 +6,15 @@ const chatSchema = Joi.object({
   // url: Joi.string(),
   recipient_public_id: Joi.string(),
   avatar: Joi.any(),
+  role: Joi.string().valid('low-admin', 'med-admin', 'high-admin', 'user', 'owner').default('user'),
+  
+  description: Joi.string(),
+
+  deleted: Joi.bool().default(false),
+  restricted: Joi.bool().default(false),
+
+  delete_reason: Joi.string(),
+  restrict_reason: Joi.string(),
 });
 
 module.exports = chatSchema;

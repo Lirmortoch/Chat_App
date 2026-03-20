@@ -2,7 +2,7 @@ const MessagesRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
 const messageSchema = require('../validation/schemas/message.schema.js');
-const { checkChatAccess, checkMessageAccess, fieldWhiteList } = require('../utils/middleware.js');
+const { checkChatAccess, checkMessageAccess, fieldWhiteList, userList } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
 MessagesRouter.get('/', async (request, response) => {
@@ -91,7 +91,7 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
   }
 });
 
-MessagesRouter.post('/', checkChatAccess, fieldWhiteList, validator(messageSchema), async (request, response) => {
+MessagesRouter.post('/', checkChatAccess, fieldWhiteList(userList), validator(messageSchema), async (request, response) => {
   if (request.userRoleInChat === 'undefined') {
     return response.status(403).json({
       message: 'Only users with access can add messages to this chat',
@@ -136,7 +136,7 @@ MessagesRouter.put(
   '/:public_id',
   checkChatAccess,
   checkMessageAccess,
-  fieldWhiteList,
+  fieldWhiteList(userList),
   validator(messageSchema),
   async (request, response) => {
     try {

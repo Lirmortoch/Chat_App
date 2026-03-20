@@ -4,7 +4,7 @@ const postgreSql = require('../db.js');
 const contactSchema = require('../validation/schemas/contact.schema.js');
 
 // const config = require('../utils/config.js');
-const { fieldWhiteList } = require('../utils/middleware.js');
+const { fieldWhiteList, userList } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
 ContactsRouter.get('/', async (request, response) => {
@@ -96,7 +96,7 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
   }
 });
 
-ContactsRouter.post('/', fieldWhiteList, validator(contactSchema), async (request, response) => {
+ContactsRouter.post('/', fieldWhiteList(userList), validator(contactSchema), async (request, response) => {
   try {
     const { first_name, last_name, phone_number, email, user_public_id } = request.body.fieldsData;
     const ownerId = request.user.id;
@@ -133,7 +133,7 @@ ContactsRouter.post('/', fieldWhiteList, validator(contactSchema), async (reques
   }
 });
 
-ContactsRouter.put('/:public_id', fieldWhiteList, validator(contactSchema), async (request, response) => {
+ContactsRouter.put('/:public_id', fieldWhiteList(userList), validator(contactSchema), async (request, response) => {
   try {
     const { fieldsData } = request.body;
     const fields = request.fields;
@@ -153,7 +153,7 @@ ContactsRouter.put('/:public_id', fieldWhiteList, validator(contactSchema), asyn
     response.status(500).json({ message: 'Internal server error' });
   }
 });
-ContactsRouter.put('/contact/avatar/:public_id', fieldWhiteList, validator(contactSchema), async (request, response) => {
+ContactsRouter.put('/contact/avatar/:public_id', fieldWhiteList(userList), validator(contactSchema), async (request, response) => {
   try {
     const { fieldsData } = request.body;
 
