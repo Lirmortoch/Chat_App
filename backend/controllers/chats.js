@@ -133,6 +133,10 @@ ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (re
     const { recipient_public_id, type, name, avatar } = request.body.fieldsData;
     const creator_id = request.user.id;
 
+    if (!type || !name) {
+      return response.status(400).json({ message: "Missing required field" });
+    }
+
     const insertedChat = await postgreSql.begin(async (sql) => {
       const [recipient] = await sql`
         SELECT id FROM chat.users WHERE public_id = ${recipient_public_id}
@@ -194,7 +198,7 @@ ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (re
 });
 
 ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList(userList), validator(chatSchema), async (request, response) => {
-  if (request.userRoleInChat !== 'owner' || request.userRoleInChat !== 'admin') {
+  if (request.userRoleInChat !== 'owner' || request.userRoleInChat.includes('admin')) {
     return response
       .status(403)
       .json({ message: 'Only owners or admins can edited fields of chat' });
@@ -206,7 +210,7 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList(userList), valida
     const fields = request.fields;
 
     const [updatedChat] = await postgreSql.begin(async (sql) => {
-      const cols = fields.filter(f => f !== 'avatar');
+      const cols = fields.filter(f => f !== 'avatar').join(', ');
 
       const [updatedChatData] = await sql`
         UPDATE chats
@@ -238,7 +242,16 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList(userList), valida
   }
 });
 ChatsRouter.put('/permissions/chat/:public_id', checkChatAccess, fieldWhiteList(adminList), validator(chatSchema), async (request, response) => {
+  const { fieldsData } = request.body;
+  const cols = request.cols;
 
+  const [newAccess] = await postgreSql`
+    UPDATE chat.users
+    SET ${postgreSql(fieldsData, cols)}
+    RETURNING ${cols}
+  `;
+
+  response.status(201).json(newAccess);
 });
 
 ChatsRouter.delete('/:public_id', checkChatAccess, async (request, response) => {

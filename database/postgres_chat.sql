@@ -17,7 +17,7 @@ CREATE TABLE chat.chats (
 	"description" text NOT NULL,
 	CONSTRAINT chats_pk PRIMARY KEY (id),
 	CONSTRAINT chats_unique_1 UNIQUE (public_id),
-	CONSTRAINT chats_url UNIQUE (url)
+	CONSTRAINT chats_url UNIQUE ("url")
 );
 
 
@@ -39,7 +39,7 @@ CREATE TABLE chat.users (
 	delete_reason varchar(128) NULL,
 	restricted bool NULL,
 	restrict_reason varchar(128) NULL,
-	"role" varchar(25) DEFAULT 'default'::character varying NOT NULL,
+	"role" varchar(25) DEFAULT 'user'::character varying NOT NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	last_name varchar(128) NULL,
 	user_about varchar(128) NULL,
@@ -66,6 +66,7 @@ CREATE TABLE chat.chat_avatars (
 	file_type varchar(25) NOT NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT chat_avatars_pk PRIMARY KEY (id),
+	CONSTRAINT chat_avatars_unique UNIQUE (public_id),
 	CONSTRAINT chat_avatars_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX chat_avatars_one_main_per_chat ON chat.chat_avatars USING btree (chat_id) WHERE (is_main = true);
@@ -80,7 +81,7 @@ CREATE UNIQUE INDEX chat_avatars_one_main_per_chat ON chat.chat_avatars USING bt
 CREATE TABLE chat.chats_members (
 	chat_id int4 NOT NULL,
 	user_id int4 NOT NULL,
-	"role" varchar(25) DEFAULT 'default'::character varying NOT NULL,
+	"role" varchar(25) DEFAULT 'user'::character varying NOT NULL,
 	deleted bool NULL,
 	delete_reason varchar(128) NULL,
 	restricted bool NULL,
@@ -194,6 +195,7 @@ CREATE TABLE chat.user_profile_photos (
 	file_type varchar(25) NOT NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT user_photos_pk PRIMARY KEY (id),
+	CONSTRAINT user_profile_photos_unique UNIQUE (public_id),
 	CONSTRAINT user_photos_user_fk FOREIGN KEY (user_id) REFERENCES chat.users(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX user_photos_one_main_per_user ON chat.user_profile_photos USING btree (user_id) WHERE (is_main = true);
@@ -235,6 +237,7 @@ CREATE TABLE chat.contact_avatars (
 	file_type varchar(25) NOT NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	CONSTRAINT contact_avatars_pk PRIMARY KEY (id),
+	CONSTRAINT contact_avatars_unique UNIQUE (public_id),
 	CONSTRAINT contact_avatars_chat_fk FOREIGN KEY (contact_id) REFERENCES chat.contacts(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX contact_avatars_one_main_per_contact ON chat.contact_avatars USING btree (contact_id) WHERE (is_main = true);

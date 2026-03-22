@@ -2,13 +2,52 @@ const postgreSql = require('../db.js');
 
 const checkUserAccess = async (request, response, next) => {
   try {
+    const user_public_id = request.params.user_public_id || request.params.public_id;
 
+    const [user] = await postgreSql`
+      SELECT * FROM chat.users
+      WHERE public_id = ${user_public_id}
+    `;
+
+    if (!user) {
+      return response.status(403).json({ message: 'Access denied: You are not registered' });
+    }
+
+    request.user = user;
+    next();
   }
   catch (error) {
     console.error('Middleware Error:', error);
     response.status(500).json({ message: 'Internal server error during access check' });
   }
 }
+const checkUserPrivileges = async (request, response, next) => {
+  try {
+    const user_id = request.user.id;
+
+    const [access] = await postgreSql`
+      SELECT role FROM chat.users
+      WHERE id = ${user_id}
+        AND (deleted IS FALSE OR deleted IS NULL)
+        AND (restricted IS FALSE OR restricted IS NULL)
+    `;
+
+    if (!access) {
+      return response.status(403).json({
+        message: 'Access denied: You do not have any privileges',
+      });
+    }
+
+    request.userRole = access;
+
+    next();
+  }
+  catch (error) {
+    console.error('Middleware Error:', error);
+    response.status(500).json({ message: 'Internal server error during privileges check' });
+  }
+} 
+
 const checkChatAccess = async (request, response, next) => {
   try {
     const chat_public_id = request.params.chat_public_id || request.params.public_id;
@@ -21,6 +60,7 @@ const checkChatAccess = async (request, response, next) => {
       WHERE c.public_id = ${chat_public_id} 
         AND cm.user_id = ${user_id}
         AND (cm.deleted IS FALSE OR cm.deleted IS NULL)
+        AND (cm.restricted IS FALSE OR cm.restricted IS NULL)
     `;
 
     if (!access) {
@@ -64,7 +104,7 @@ const checkMessageAccess = async (request, response, next) => {
   }
 };
 
-const adminList = ['restrict_reason', 'delete_reason', 'restrict', 'delete'];
+const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
 const userList = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about', 'description'];
 
 const fieldWhiteList = (list) => {
@@ -73,7 +113,7 @@ const fieldWhiteList = (list) => {
 
     const fields = Object.keys(fieldsData);
     if (fields.length === 0) {
-      return response.status(400).json({ message: "No valid fields to update" });
+      return response.status(400).json({ message: "No valid fields to update or insert" });
     }
 
     fields.forEach(field => {
@@ -83,9 +123,10 @@ const fieldWhiteList = (list) => {
     });
 
     request.fields = fields;
+    request.cols = fields.join(', ');
 
     next();
   }
 }
 
-module.exports = { checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList,  };
+module.exports = { checkUserAccess, checkUserPrivileges, checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList,  };

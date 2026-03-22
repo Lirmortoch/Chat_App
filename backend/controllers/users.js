@@ -5,7 +5,7 @@ const postgreSql = require('../db.js');
 const userSchema = require('../validation/schemas/user.schema.js');
 
 const config = require('../utils/config.js');
-const { fieldWhiteList, userList, adminList } = require('../utils/middleware.js');
+const { fieldWhiteList, userList, adminList, checkUserPrivileges } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
 UsersRouter.get('/', async (request, response) => {
@@ -121,7 +121,7 @@ UsersRouter.put('/:public_id', fieldWhiteList(userList), validator(userSchema), 
     const fields = request.fields;
 
     const updatedUser = await postgreSql.begin(async (sql) => {
-      const cols = fields.filter(f => f !== 'avatar');
+      const cols = fields.filter(f => f !== 'avatar').join(', ');
 
       const [updatedUserData] = await sql`
         UPDATE chat.users
@@ -152,8 +152,23 @@ UsersRouter.put('/:public_id', fieldWhiteList(userList), validator(userSchema), 
     response.status(500).json({ message: `Internal server error` });
   }
 });
-UsersRouter.put('/permissions/user/:public_id', checkChatAccess, fieldWhiteList(adminList), validator(chatSchema), async (request, response) => {
+UsersRouter.put('/access/user/:public_id', checkUserPrivileges, fieldWhiteList(adminList), validator(chatSchema), async (request, response) => {
+  try {
+    const { fieldsData } = request.body;
+    const cols = request.cols;
 
+    const [newAccess] = await postgreSql`
+      UPDATE chat.users
+      SET ${postgreSql(fieldsData, cols)}
+      RETURNING ${cols}
+    `;
+
+    response.status(201).json(newAccess);
+  }
+  catch (error) {
+    console.log(error);
+    response.status(500).json({ message: `Internal server error` });
+  }
 });
 
 UsersRouter.delete('/:public_id', async (request, response) => {

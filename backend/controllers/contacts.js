@@ -101,7 +101,7 @@ ContactsRouter.post('/', fieldWhiteList(userList), validator(contactSchema), asy
     const { first_name, last_name, phone_number, email, user_public_id } = request.body.fieldsData;
     const ownerId = request.user.id;
 
-    if (!first_name || !email) {
+    if (!first_name || !email || !user_public_id) {
       return response.status(400).json({ message: "Missing required field" });
     }
 
@@ -138,12 +138,12 @@ ContactsRouter.put('/:public_id', fieldWhiteList(userList), validator(contactSch
     const { fieldsData } = request.body;
     const fields = request.fields;
 
-    const cols = fields.filter(f => f !== 'avatar');
+    const cols = fields.filter(f => f !== 'avatar').join(', ');
     const [updatedContact] = await postgreSql`
       UPDATE chat.contacts
       SET ${sql(fieldsData, cols)}
       WHERE public_id = ${request.params.public_id}
-      RETURNING ${cols.join('')}
+      RETURNING ${cols}
     `;
     
     response.status(201).json(updatedContact);

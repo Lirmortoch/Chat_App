@@ -4,6 +4,7 @@ const { rateLimit } = require('express-rate-limit');
 
 const config = require('./utils/config');
 const logger = require('./utils/logger');
+const { checkUserAccess } = require('./utils/middleware');
 
 const app = express();
 const limiter = rateLimit({
@@ -16,5 +17,7 @@ const limiter = rateLimit({
 
 app.use(helmet());
 app.use('/api/', limiter);
+
+app.use('/api/marazam/', checkUserAccess);
 
 module.exports = app;

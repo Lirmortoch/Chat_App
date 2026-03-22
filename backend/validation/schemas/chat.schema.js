@@ -2,7 +2,7 @@ const Joi = require('joi');
 
 const chatSchema = Joi.object({
   name: Joi.string().max(45),
-  type: Joi.string().max(25).valid('private', 'channel', 'group'),
+  type: Joi.string().max(25).valid('private-chat', 'private-channel', 'private-group', 'public-channel', 'public-group'),
   // url: Joi.string(),
   recipient_public_id: Joi.string(),
   avatar: Joi.any(),
