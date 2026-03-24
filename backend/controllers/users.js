@@ -5,15 +5,15 @@ const postgreSql = require('../db.js');
 const userSchema = require('../validation/schemas/user.schema.js');
 
 const config = require('../utils/config.js');
-const { fieldWhiteList, userList, adminList, checkUserPrivileges } = require('../utils/middleware.js');
+const { fieldWhiteList, userList, adminList, checkUserPrivileges, fieldObjectChecking } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
 UsersRouter.get('/', async (request, response) => {
   try {
     const users = await postgreSql`
-    SELECT public_id
-    FROM chat.users
-  `;
+      SELECT public_id
+      FROM chat.users
+    `;
 
     response.json(users);
   } catch (error) {
@@ -23,17 +23,15 @@ UsersRouter.get('/', async (request, response) => {
 });
 UsersRouter.get('/:public_id', async (request, response) => {
   try {
-    const user_id = request.user.id;
-
     const user = await postgreSql.begin(async (sql) => {
       const [userData] = await sql`
-        SELECT name, username, email, phone_number, created_at, deleted, restricted, role, public_id
-        FROM chat.users WHERE public_id = ${user_id}
+        SELECT name, username, email, phone_number, created_at, deleted, restricted, role
+        FROM chat.users WHERE public_id = ${request.params.public_id}
       `;
       const userAvatars = await sql`
         SELECT file_url, file_type, is_main, created_at, public_id
         FROM chat.user_profile_photos
-        WHERE user_id = ${user_id}
+        WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${request.params.public_id})
       `;
 
       return {
@@ -62,7 +60,7 @@ UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (re
     }
 
     const saltRounds = config.SALT_ROUNDS;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const password_hash = await bcrypt.hash(password, saltRounds);
 
     const insertedUser = await postgreSql.begin(async (sql) => {
       const [usersData] = await sql`
@@ -81,7 +79,7 @@ UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (re
           ${first_name},
           ${last_name},
           ${username},
-          ${passwordHash},
+          ${password_hash},
           ${email},
           ${phone_number},
           false,
@@ -93,10 +91,10 @@ UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (re
       `;
 
       let usersAvatar = null;
-      if (avatar) {
+      if (avatar && fieldObjectChecking(avatar)) {
         [usersAvatar] = await sql`
           INSERT INTO chat.user_profile_photos (file_type, file_url, user_id)
-          ${sql({...avatar, user_id: `SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`, is_main: avatar.is_main})}
+          ${sql({...avatar, user_id: `SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`})}
           RETURNING file_url, file_type, created_at, is_main, public_id
         `;
       }
@@ -131,7 +129,7 @@ UsersRouter.put('/:public_id', fieldWhiteList(userList), validator(userSchema), 
       `;
 
       let updatedUserAvatar = null;
-      if (fields.includes('avatar') && fieldsData.avatar) {
+      if (fields.includes('avatar') && fieldObjectChecking(fieldsData.avatar)) {
         [updatedUserAvatar] = await sql`
           UPDATE chat.user_profile_photos
           SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
@@ -177,7 +175,7 @@ UsersRouter.delete('/:public_id', async (request, response) => {
 
     const deletedUser = await postgreSql.begin(async (sql) => {
       const [deletedUserData] = await sql`
-        DELETE from chat.users 
+        DELETE FROM chat.users 
         WHERE id = ${user_id}
         RETURNING email, name, phone_number, username, role, deleted, restricted, public_id
       `;
@@ -188,7 +186,7 @@ UsersRouter.delete('/:public_id', async (request, response) => {
         WHERE user_id = ${user_id}
       `;
 
-      let deletedUserAvatars;
+      let deletedUserAvatars = null;
       if (avatars && avatars.length !== 0) {
         deletedUserAvatars = await sql`
           DELETE from chat.user_profile_photos

@@ -2,7 +2,7 @@ const ChatsRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
 const chatSchema = require('../validation/schemas/chat.schema.js');
-const { checkChatAccess, fieldWhiteList, userList, adminList } = require('../utils/middleware.js');
+const { checkChatAccess, fieldWhiteList, userList, adminList, fieldObjectChecking } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
 ChatsRouter.get('/', async (request, response) => {
@@ -24,26 +24,29 @@ ChatsRouter.get('/info/:public_id', checkChatAccess, async (request, response) =
   }
 
   try {
-    const chatId = request.chatInternalId;
+    const chat_id = request.chatInternalId;
     const user_id = request.user.id;
 
     const chat = await postgreSql.begin(async (sql) => {
       const [chatData] = await sql`
         SELECT name, url, type, public_id
         FROM chat.chats
-        WHERE id = ${chatId}
+        WHERE id = ${chat_id}
       `;
       let chatAvatar = null;
       if (chatData.type === 'private') {
         [chatAvatar] = await sql`
-          SELECT file_url, file_type, created_at
+          SELECT file_url, file_type, created_at, public_id
           FROM chat.contact_avatars
           WHERE contact_id = (SELECT id FROM chat.contacts WHERE owner_id = ${user_id})
-           AND is_main = true
         `;
       }
-      else {
-        [chatAvatar] = await sql``;
+      else if (chatData.type !== 'private') {
+        [chatAvatar] = await sql`
+          SELECT file_url, file_type, created_at, public_id
+          FROM chat.chat_avatars
+          WHERE id = ${chat_id}
+        `;
       }
 
       return {
@@ -68,24 +71,34 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
   }
 
   try {
-    const user_public_id = request.params.public_id;
+    const user_id = request.user.id;
 
     const chats = await postgreSql`
-    WITH user_info AS (
-        SELECT id FROM chat.users WHERE public_id = ${user_public_id}
-    )
     SELECT DISTINCT ON (c.id)
         c.public_id AS chat_id,
         c.type AS chat_type,
        
         CASE 
             WHEN c.type = 'private' THEN (
-                SELECT u2.name FROM chat.chats_members cm2
-                JOIN chat.users u2 ON cm2.user_id = u2.id
-                WHERE cm2.chat_id = c.id AND u2.id != (SELECT id FROM user_info)
-                LIMIT 1
+              SELECT u2.name FROM chat.chats_members cm2
+              JOIN chat.users u2 ON cm2.user_id = u2.id
+              WHERE cm2.chat_id = c.id AND u2.id != ${user_id}
+              LIMIT 1
+
+              JOIN chat.contact_avatars cav ON chat.contacts cos cos.id = (SELECT id FROM chat.contacts WHERE owner_id = ${user_id}) = (
+                SELECT file_url, file_type, created_at
+                FROM chat.contact_avatars cav
+                WHERE is_main = true
+              )
             )
-            ELSE c.name 
+            ELSE (
+              c.name,
+              JOIN chat.chat_avatars ca ON ca.chat_id = c.id = (
+                SELECT file_url, file_type, created_at
+                FROM chat.chat_avatars ca
+                WHERE is_main = true
+              )
+            ) 
         END AS display_name,
 
         m.message AS last_message,
@@ -100,7 +113,7 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
               AND m2.sender_id != (SELECT id FROM user_info)
               AND NOT EXISTS (
                   SELECT 1 FROM chat.messages_hidden mh 
-                  WHERE mh.message_id = m2.id AND mh.user_id = (SELECT id FROM user_info)
+                  WHERE mh.message_id = m2.id AND mh.user_id = ${user_id}
               )
         ) AS unread_count
 
@@ -112,12 +125,13 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
         WHERE m3.chat_id = c.id
           AND NOT EXISTS (
               SELECT 1 FROM chat.messages_hidden mh2 
-              WHERE mh2.message_id = m3.id AND mh2.user_id = (SELECT id FROM user_info)
+              WHERE mh2.message_id = m3.id AND mh2.user_id = ${user_id}
           )
         ORDER BY m3.created_at DESC
         LIMIT 1
     )
-    WHERE cm.user_id = (SELECT id FROM user_info)
+    
+    WHERE cm.user_id = ${user_id}
     ORDER BY c.id, m.created_at DESC NULLS LAST
     `;
 
@@ -176,10 +190,17 @@ ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (re
       `;
 
       let newChatAvatar = null;
-      if (avatar) {
+      if (avatar && fieldObjectChecking(avatar) && newChat.type !== 'private') {
         [newChatAvatar] = await sql`
           INSERT INTO chat.chat_avatars (file_type, file_url, chat_id, is_main)
           VALUES (${avatar.file_type}, ${avatar.file_url}, SELECT id FROM chat.chats WHERE public_id = ${newChat.public_id}, ${avatar.is_main})
+        `;
+      }
+      else if (newChat.type === 'private') {
+        [newChatAvatar] = await sql`
+          SELECT file_url, file_type, created_at
+          FROM chat.contact_avatars
+          WHERE contact_id = (SELECT id FROM chat.contacts WHERE owner_id = ${creator_id})
         `;
       }
 
@@ -220,7 +241,7 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList(userList), valida
       `;
 
       let updatedChatAvatar = null;
-      if (fields.includes('avatar') && fieldsData.avatar) {
+      if (fields.includes('avatar') && fieldObjectChecking(fieldsData.avatar)) {
         [updatedChatAvatar] = await sql`
           UPDATE chat.chat_avatars
           SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
@@ -260,11 +281,11 @@ ChatsRouter.delete('/:public_id', checkChatAccess, async (request, response) => 
   }
 
   try {
-    const chatId = request.chatInternalId;
+    const chat_id = request.chatInternalId;
 
     const deletedChat = await postgreSql`
       DELETE FROM chats
-      WHERE id = ${chatId}
+      WHERE id = ${chat_id}
       RETURNING name, url, public_id
     `;
 

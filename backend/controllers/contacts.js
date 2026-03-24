@@ -30,21 +30,11 @@ ContactsRouter.get('/:public_id', async (request, response) => {
         WHERE public_id = ${request.params.public_id}
       `;
 
-      let [contactAvatar] = await sql`
+      const [contactAvatar] = await sql`
         SELECT file_url, file_type, created_at
         FROM chat.contact_avatars
         WHERE contact_id = (SELECT id FROM chat.contacts WHERE public_id = ${contactData.public_id})
-          AND is_main = true
       `;
-
-      if (!contactAvatar) {
-        [contactAvatar] = await sql`
-          SELECT file_url, file_type, created_at
-          FROM chat.user_profile_photos
-          WHERE user_id = (SELECT user_id FROM chat.contacts WHERE public_id = ${contactData.public_id})
-            AND is_main = true
-        `;
-      }
 
       return {
         contactData,
@@ -67,22 +57,25 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const contacts = await postgreSql`
-      SELECT 
-        c.*, 
-        CASE 
-          WHEN p.id IS NOT NULL THEN 
-            json_build_object(
-              'url', p.file_url,
-              'type', p.file_type,
-              'is_main', p.is_main
-            )
-          ELSE null 
-        END AS avatar
-      FROM chat.contacts c
-      LEFT JOIN chat.user_profile_photos p ON c.user_id = p.user_id AND p.is_main = true
-      WHERE c.owner_id = ${user_id}
-    `;
+    const contacts = await postgreSql.begin(async (sql) => {
+      const contactsData = await sql`
+        SELECT phone_number, email, first_name, last_name, created_at, public_id 
+        FROM chat.contacts
+        WHERE owner_id = ${user_id}
+      `;
+
+      const contactsAvatars = await sql`
+        SELECT file_url, file_type, created_at, public_id
+        FROM chat.contact_avatars
+        WHERE contact_id = (SELECT id FROM chat.contacts WHERE public_id = ${contactsData.public_id})
+          AND is_main = true
+      `;
+
+      return {
+        contactsData,
+        contactsAvatars,
+      }
+    });
 
     if (!contacts) {
       return response.status(404).json({ message: 'Contacts not found' });
@@ -105,25 +98,56 @@ ContactsRouter.post('/', fieldWhiteList(userList), validator(contactSchema), asy
       return response.status(400).json({ message: "Missing required field" });
     }
 
-    const insertedContact = await postgreSql`
-      INSERT INTO chat.contacts (
-        phone_number,
-        first_name,
-        last_name,
-        email,
-        user_id,
-        owner_id
-      )
-      VALUES (
-        ${phone_number},
-        ${first_name},
-        ${last_name},
-        ${email},
-        (SELECT id from chat.users WHERE public_id = ${user_public_id}),
-        ${ownerId}
-      )
-      RETURNING phone_number, first_name, last_name, email, public_id
-    `;
+    const insertedContact = await postgreSql.begin(async (sql) => {
+      const [insertedContactData] = await sql`
+        INSERT INTO chat.contacts (
+          phone_number,
+          first_name,
+          last_name,
+          email,
+          user_id,
+          owner_id
+        )
+        VALUES (
+          ${phone_number},
+          ${first_name},
+          ${last_name},
+          ${email},
+          (SELECT id from chat.users WHERE public_id = ${user_public_id}),
+          ${ownerId}
+        )
+        RETURNING phone_number, first_name, last_name, email, public_id
+      `;
+
+      const [userAvatar] = await sql`
+        SELECT file_type, file_url, is_main, created_at
+        FROM chat.user_profile_photos
+        WHERE user_id = (SELECT id from chat.users WHERE public_id = ${user_public_id})
+          AND is_main = true
+      `;
+
+      let insertedContactAvatar = null;
+      if (userAvatar) {
+        [insertedContact] = await sql`
+          INSERT INTO chat.contact_avatars (
+            file_url,
+            file_type,
+            is_main, 
+            created_at,
+            contact_id
+          )
+          VALUES (
+            ${sql({...userAvatar, contact_id: `SELECT id FROM chat.contacts WHERE public_id = ${userAvatar.public_id}`})}
+          )
+          RETURNING file_url, file_type
+        `;
+      }
+
+      return {
+        insertedContactData,
+        insertedContactAvatar,
+      }
+    });
 
     response.status(201).json(insertedContact);
   }
@@ -178,20 +202,20 @@ ContactsRouter.delete('/:public_id', async (request, response) => {
       const [deletedContactData] = await sql`
         DELETE FROM chat.contacts
         WHERE public_id = ${request.params.public_id}
-        RETURNING phone_number, first_name, last_name, email, public_id, id
+        RETURNING phone_number, first_name, last_name, email, public_id
       `;
 
       const contactAvatars = await sql`
-        SELECT file_url, file_type, created_at
+        SELECT file_url, file_type, created_at, contact_id
         FROM chat.contact_avatars
-        WHERE id = ${deletedContactData.id}
+        WHERE contact_id = (SELECT id FROM chat.contacts WHERE public_id = ${deletedContactData.id})
       `;
 
       let deletedContactAvatars = null;
       if (contactAvatars && contactAvatars.length !== 0) {
         deletedContactAvatars = sql`
           DELETE FROM chat.contact_avatars
-          WHERE id = ${deletedContactData.id}
+          WHERE contact_id = ${contactAvatars.contact_id}
           RETURNING file_url, file_type, created_at
         `;
       }

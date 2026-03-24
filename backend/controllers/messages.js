@@ -103,7 +103,7 @@ MessagesRouter.post('/', checkChatAccess, fieldWhiteList(userList), validator(me
     const chat_id = request.chatInternalId;
     const sender_id = request.user.id;
 
-    if (message === undefined && additionals.length === 0) {
+    if (message === undefined || additionals.length === 0) {
       return response.status(400).json({ message: "Missing required field" });
     }
 

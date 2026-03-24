@@ -1,3 +1,4 @@
+const { object } = require('joi');
 const postgreSql = require('../db.js');
 
 const checkUserAccess = async (request, response, next) => {
@@ -128,5 +129,12 @@ const fieldWhiteList = (list) => {
     next();
   }
 }
+const fieldObjectChecking = (object) => {
+  for (const f in object) {
+    if (f !== undefined) return false
+  }
 
-module.exports = { checkUserAccess, checkUserPrivileges, checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList,  };
+  return true;
+}
+
+module.exports = { checkUserAccess, checkUserPrivileges, checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList, fieldObjectChecking, };
