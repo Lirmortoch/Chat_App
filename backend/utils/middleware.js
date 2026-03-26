@@ -10,8 +10,8 @@ const checkUserAccess = async (request, response, next) => {
       WHERE public_id = ${user_public_id}
     `;
 
-    if (!user) {
-      return response.status(403).json({ message: 'Access denied: You are not registered' });
+    if (!user || user.restricted || user.deleted) {
+      return response.status(403).json({ message: 'Access denied: You are not registered or your account was banned' });
     }
 
     request.user = user;

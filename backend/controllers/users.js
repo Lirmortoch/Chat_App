@@ -29,9 +29,13 @@ UsersRouter.get('/:public_id', async (request, response) => {
         FROM chat.users WHERE public_id = ${request.params.public_id}
       `;
       const userAvatars = await sql`
-        SELECT file_url, file_type, is_main, created_at, public_id
+        SELECT updated_at, is_main, created_at
         FROM chat.user_profile_photos
         WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${request.params.public_id})
+        JOIN chat.user_profile_photos usp ON chat.photos ph
+          WHERE usp.photo_id = ph.public_id (
+            SELECT file_url, file_type, file_name, width, height
+          )
       `;
 
       return {
@@ -92,11 +96,23 @@ UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (re
 
       let usersAvatar = null;
       if (avatar && fieldObjectChecking(avatar)) {
-        [usersAvatar] = await sql`
-          INSERT INTO chat.user_profile_photos (file_type, file_url, user_id)
-          ${sql({...avatar, user_id: `SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`})}
-          RETURNING file_url, file_type, created_at, is_main, public_id
+        const [photo] = await sql`
+          INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
+          ${sql({...avatar.photo})}
+          RETURNING file_type, file_url, file_name, width, height, public_id
         `;
+
+        [usersAvatar] = await sql`
+          INSERT INTO chat.user_profile_photos (is_main, user_id, photo_id)
+          VALUES (
+            ${avatar.is_main},
+            ${`SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`},
+            ${photo.public_id}
+          )
+          RETURNING is_main, user_id, photo_id
+        `;
+
+        usersAvatar.photo = structuredClone(photo);
       }
 
       return {
