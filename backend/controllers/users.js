@@ -23,26 +23,34 @@ UsersRouter.get('/', async (request, response) => {
 });
 UsersRouter.get('/:public_id', async (request, response) => {
   try {
-    const user = await postgreSql.begin(async (sql) => {
-      const [userData] = await sql`
-        SELECT name, username, email, phone_number, created_at, deleted, restricted, role
-        FROM chat.users WHERE public_id = ${request.params.public_id}
-      `;
-      const userAvatars = await sql`
-        SELECT updated_at, is_main, created_at
-        FROM chat.user_profile_photos
-        WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${request.params.public_id})
-        JOIN chat.user_profile_photos usp ON chat.photos ph
-          WHERE usp.photo_id = ph.public_id (
-            SELECT file_url, file_type, file_name, width, height
-          )
-      `;
+    const user = await postgreSql`
+      SELECT
+        u.name, 
+        u.username, 
+        u.email, 
+        u.phone_number, 
+        u.created_at, 
+        u.deleted, 
+        u.restricted, 
+        u.role,
 
-      return {
-        userData,
-        userAvatars
-      }
-    });
+        CASE WHEN ph.id IS NOT NULL THEN
+          json_build_object(
+            'url', ph.file_url,
+            'type', ph.file_type,
+            'width', ph.width,
+            'height', ph.height,
+            'name', ph.file_name,
+            'is_main', upp.is_main,
+            'created_at', upp.created_at,
+            'updated_at', upp.updated_at
+          )
+        ELSE NULL END AS avatar
+        FROM chat.users u
+        LEFT JOIN chat.user_profile_photos upp ON u.id = upp.user_id
+        LEFT JOIN chat.photos ph ON upp.photo_id = ph.id
+        WHERE u.public_id = ${request.params.public_id}
+      `;
 
     if (!user) {
       return response.status(404).json({ message: 'User not found' });
@@ -145,13 +153,24 @@ UsersRouter.put('/:public_id', fieldWhiteList(userList), validator(userSchema), 
       `;
 
       let updatedUserAvatar = null;
-      if (fields.includes('avatar') && fieldObjectChecking(fieldsData.avatar)) {
-        [updatedUserAvatar] = await sql`
-          UPDATE chat.user_profile_photos
-          SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
-          WHERE user_id = ${user_id}
-          RETURNING file_url, file_type, is_main, created_at, public_id
+      if (fieldsData.avatar && fieldObjectChecking(fieldsData.avatar)) {
+        const [photo] = await sql`
+          INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
+          ${sql({...fieldsData.avatar.photo})}
+          RETURNING file_type, file_url, file_name, width, height, public_id
         `;
+
+        [updatedUserAvatar] = await sql`
+          INSERT INTO chat.user_profile_photos (is_main, user_id, photo_id)
+          VALUES (
+            ${fieldsData.avatar.is_main},
+            ${user_id},
+            ${photo.public_id}
+          )
+          RETURNING is_main, user_id, photo_id
+        `;
+
+        updatedUserAvatar.photo = structuredClone(photo);
       }
 
       return {
@@ -189,33 +208,11 @@ UsersRouter.delete('/:public_id', async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const deletedUser = await postgreSql.begin(async (sql) => {
-      const [deletedUserData] = await sql`
-        DELETE FROM chat.users 
-        WHERE id = ${user_id}
-        RETURNING email, name, phone_number, username, role, deleted, restricted, public_id
-      `;
-
-      const avatars = await sql`
-        SELECT file_url, file_type, created_at, is_main, public_id
-        FROM chat.user_profile_photos
-        WHERE user_id = ${user_id}
-      `;
-
-      let deletedUserAvatars = null;
-      if (avatars && avatars.length !== 0) {
-        deletedUserAvatars = await sql`
-          DELETE from chat.user_profile_photos
-          WHERE user_id = ${user_id}
-          RETURNING file_url, file_type, is_main, created_at, public_id
-        `;
-      }
-
-      return {
-        deletedUserData,
-        deletedUserAvatars,
-      };
-    });
+    const [deletedUser] = await postgreSql`
+      DELETE FROM chat.users 
+      WHERE id = ${user_id}
+      RETURNING email, name, phone_number, username, role, deleted, restricted, public_id
+    `;
 
     response.status(201).json(deletedUser);
   } catch (error) {

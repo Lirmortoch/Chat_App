@@ -21,9 +21,24 @@ MessagesRouter.get('/', async (request, response) => {
 MessagesRouter.get('/message/:message_public_id', async (request, response) => {
   try {
     const [message] = await postgreSql`
-      SELECT message, created_at, edited_at, public_id
-      FROM chat.messages
-      WHERE public_id = ${request.params.message_public_id}
+      SELECT 
+        m.message, 
+        m.created_at, 
+        m.edited_at, 
+        m.public_id,
+        COALESCE(
+          (SELECT json_agg(
+              json_build_object(
+                'url', a.file_url,
+                'name', a.file_name,
+                'type', a.file_type,
+                'created_at', a.created_at
+              )
+          ) FROM chat.additionals a WHERE a.message_id = m.id),
+          '[]'
+        ) AS attachments
+      FROM chat.messages m
+      WHERE m.public_id = ${request.params.message_public_id};
     `;
 
     if (!message) {
@@ -65,8 +80,10 @@ MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, async (request, res
           COALESCE(
               (SELECT json_agg(
                   json_build_object(
-                      'url', a.file_url,
-                      'type', a.file_type
+                    'url', a.file_url,
+                    'name', a.file_name,
+                    'type', a.file_type,
+                    'created_at', a.created_at
                   )
               ) 
               FROM chat.additionals a 
@@ -103,7 +120,7 @@ MessagesRouter.post('/', checkChatAccess, fieldWhiteList(userList), validator(me
     const chat_id = request.chatInternalId;
     const sender_id = request.user.id;
 
-    if (message === undefined || additionals.length === 0) {
+    if (message === undefined || message === "" && additionals.length === 0) {
       return response.status(400).json({ message: "Missing required field" });
     }
 
@@ -117,7 +134,7 @@ MessagesRouter.post('/', checkChatAccess, fieldWhiteList(userList), validator(me
       let newAdditionals = null;
       if (additionals && additionals.length > 0) {
         newAdditionals = await sql`
-          INSERT INTO chat.additionals (file_type, file_url, message_id)
+          INSERT INTO chat.additionals (file_type, file_url, file_name, message_id)
           ${sql(additionals.map((a) => ({ ...a, message_id: `SELECT id FROM chat.messages WHERE public_id = ${newMessage.public_id}` })))}
           RETURNING file_type, file_url, public_id
         `;
@@ -156,32 +173,39 @@ MessagesRouter.put(
           [updatedMessageData] = await sql`
             UPDATE chat.messages
             SET message = ${fieldsData.message},
-            edited_at = now()
             WHERE id = ${messageInternalId}
-            RETURNING message, edited_at, public_id
+            RETURNING message, public_id
           `;
 
           messageToReturn = updatedMessageData;
         }
-        
         if (fields.includes('additionals') && fieldsData.additionals) {
-          let updatedAdditionals = await sql`
-            INSERT INTO chat.additionals (file_type, file_url, message_id)
-            ${sql(additionals.map((a) => ({ ...a, message_id: messageInternalId })))}
-            RETURNING file_type, file_url, public_id
-          `;
-          [updatedMessageData] = await sql`
-            UPDATE chat.messages
-            SET edited_at = now()
-            WHERE id = ${messageInternalId}
-            RETURNING edited_at, public_id
-          `;
-
+          let updatedAdditionals = null;
+          
+          if (fieldsData.additionals.delete) {
+            updatedAdditionals = await sql`
+              DELETE FROM chat.additionals
+              WHERE message_id = ${messageInternalId}
+              RETURNING file_type, file_url, file_name, public_id, created_at
+            `;
+          }
+          else {
+            updatedAdditionals = await sql`
+              INSERT INTO chat.additionals (file_type, file_url, file_name, message_id)
+              ${sql(additionals.map((a) => ({ ...a, message_id: messageInternalId })))}
+              RETURNING file_type, file_url, public_id
+            `;
+          }
+          
           messageToReturn = {updatedAdditionals, updatedMessageData}
         }
-        else {
-          response.status(400).json({ message: 'Invalid field' });
-        }
+
+        [updatedMessageData.edited_at] = await sql`
+          UPDATE chat.messages
+          SET edited_at = now()
+          WHERE id = ${messageInternalId}
+          RETURNING edited_at
+        `;
 
         return messageToReturn;
       });
@@ -208,33 +232,11 @@ MessagesRouter.delete(
     try {
       const messageInternalId = request.messageInternalId;
 
-      const deletedMessage = await postgreSql.begin(async (sql) => {
-          const [deletedMessageData] = await sql`
-          DELETE from chat.messages
-          WHERE id = ${messageInternalId}
-          RETURNING message, public_id, created_at, edited_at
-        `;
-
-        const messageAdditionals = await sql`
-          SELECT file_type, file_url, created_at
-          FROM chat.additionals
-          WHERE message_id = ${messageInternalId}
-        `;
-
-        let deletedAdditionals = null;
-        if (messageAdditionals && messageAdditionals.length !== 0) {
-          deletedAdditionals = await sql`
-            DELETE from chat.additionals
-            WHERE message_id = ${messageInternalId}
-            RETURNING file_type, file_url, created_at, public_id
-          `;
-        }
-
-        return {
-          deletedMessageData,
-          deletedAdditionals,
-        }
-      });
+      const deletedMessage = await postgreSql`
+        DELETE from chat.messages
+        WHERE id = ${messageInternalId}
+        RETURNING message, public_id, created_at, edited_at
+      `;
 
       response.status(201).json(deletedMessage);
     } catch (error) {
