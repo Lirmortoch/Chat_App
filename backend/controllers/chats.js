@@ -18,53 +18,27 @@ ChatsRouter.get('/', async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 });
-ChatsRouter.get('/info/:public_id', checkChatAccess, async (request, response) => {
-  if (request.userRoleInChat === 'undefined') {
-    return response.status(403).json({ message: 'Only users with access can see this chat' });
-  }
+// ChatsRouter.get('/chat/:public_id', checkChatAccess, async (request, response) => {
+//   if (request.userRoleInChat === 'undefined') {
+//     return response.status(403).json({ message: 'Only users with access can see this chat' });
+//   }
 
-  try {
-    const chat_id = request.chatInternalId;
-    const user_id = request.user.id;
+//   try {
+//     const chat_id = request.chatInternalId;
+//     const user_id = request.user.id;
 
-    const chat = await postgreSql.begin(async (sql) => {
-      const [chatData] = await sql`
-        SELECT name, url, type, public_id
-        FROM chat.chats
-        WHERE id = ${chat_id}
-      `;
-      let chatAvatar = null;
-      if (chatData.type === 'private') {
-        [chatAvatar] = await sql`
-          SELECT file_url, file_type, created_at, public_id
-          FROM chat.contact_avatars
-          WHERE contact_id = (SELECT id FROM chat.contacts WHERE owner_id = ${user_id})
-        `;
-      }
-      else if (chatData.type !== 'private') {
-        [chatAvatar] = await sql`
-          SELECT file_url, file_type, created_at, public_id
-          FROM chat.chat_avatars
-          WHERE id = ${chat_id}
-        `;
-      }
+ 
 
-      return {
-        chatData,
-        chatAvatar
-      }
-    });
+//     if (!chat) {
+//       return response.status(404).json({ message: 'Message not found' });
+//     }
 
-    if (!chat) {
-      return response.status(404).json({ message: 'Message not found' });
-    }
-
-    response.json(chat);
-  } catch (error) {
-    console.log(error);
-    response.status(500).json({ message: 'Internal server error' });
-  }
-});
+//     response.json(chat);
+//   } catch (error) {
+//     console.log(error);
+//     response.status(500).json({ message: 'Internal server error' });
+//   }
+// });
 ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) => {
   if (request.userRoleInChat === 'undefined') {
     return response.status(403).json({ message: 'Only users with access can see this chats' });
@@ -74,65 +48,70 @@ ChatsRouter.get('/user/:public_id', checkChatAccess, async (request, response) =
     const user_id = request.user.id;
 
     const chats = await postgreSql`
-    SELECT DISTINCT ON (c.id)
-        c.public_id AS chat_id,
-        c.type AS chat_type,
-       
-        CASE 
-            WHEN c.type = 'private' THEN (
-              SELECT u2.name FROM chat.chats_members cm2
-              JOIN chat.users u2 ON cm2.user_id = u2.id
-              WHERE cm2.chat_id = c.id AND u2.id != ${user_id}
-              LIMIT 1
-
-              JOIN chat.contact_avatars cav ON chat.contacts cos cos.id = (SELECT id FROM chat.contacts WHERE owner_id = ${user_id}) = (
-                SELECT file_url, file_type, created_at
-                FROM chat.contact_avatars cav
-                WHERE is_main = true
-              )
-            )
-            ELSE (
-              c.name,
-              JOIN chat.chat_avatars ca ON ca.chat_id = c.id = (
-                SELECT file_url, file_type, created_at
-                FROM chat.chat_avatars ca
-                WHERE is_main = true
-              )
-            ) 
-        END AS display_name,
-
-        m.message AS last_message,
-        m.created_at AS last_message_time,
-        (SELECT public_id FROM chat.users WHERE id = m.sender_id) AS last_sender_id,
-
-        (
-            SELECT count(*) 
-            FROM chat.messages m2 
-            WHERE m2.chat_id = c.id 
-              AND m2.created_at > cm.last_read_at
-              AND m2.sender_id != (SELECT id FROM user_info)
-              AND NOT EXISTS (
-                  SELECT 1 FROM chat.messages_hidden mh 
-                  WHERE mh.message_id = m2.id AND mh.user_id = ${user_id}
-              )
-        ) AS unread_count
-
-    FROM chat.chats_members cm
-    JOIN chat.chats c ON cm.chat_id = c.id
-    LEFT JOIN chat.messages m ON m.id = (
-        SELECT m3.id 
-        FROM chat.messages m3
-        WHERE m3.chat_id = c.id
-          AND NOT EXISTS (
-              SELECT 1 FROM chat.messages_hidden mh2 
-              WHERE mh2.message_id = m3.id AND mh2.user_id = ${user_id}
-          )
-        ORDER BY m3.created_at DESC
-        LIMIT 1
-    )
+      SELECT DISTINCT ON (c.id)
+      c.public_id AS chat_id,
+      c.type AS chat_type,
+      cm.last_read_at,
     
-    WHERE cm.user_id = ${user_id}
-    ORDER BY c.id, m.created_at DESC NULLS LAST
+      CASE 
+          WHEN c.type = 'private' THEN u_other.first_name || ' ' || u_other.last_name
+          ELSE c.name 
+      END AS display_name,
+
+      COALESCE(
+          CASE WHEN c.type = 'private' THEN 
+              (SELECT ph.file_url FROM chat.contact_avatars cav 
+              JOIN chat.photos ph ON cav.photo_id = ph.public_id 
+              WHERE cav.contact_id = con.id AND cav.is_main = true)
+          END,
+          CASE WHEN c.type = 'private' THEN 
+              (SELECT ph.file_url FROM chat.user_profile_photos upp 
+              JOIN chat.photos ph ON upp.photo_id = ph.public_id 
+              WHERE upp.user_id = u_other.id AND upp.is_main = true)
+          END,
+          (SELECT file_url FROM chat.photos WHERE public_id = c.photo_id) 
+      ) AS avatar_url,
+
+      m.message AS last_message,
+      m.created_at AS last_message_time,
+      u_sender.public_id AS last_sender_public_id,
+
+      (
+          SELECT count(*)::int
+          FROM chat.messages m2 
+          WHERE m2.chat_id = c.id 
+            AND m2.created_at > cm.last_read_at
+            AND m2.sender_id != ${user_id}
+            AND NOT EXISTS (
+                SELECT 1 FROM chat.messages_hidden mh 
+                WHERE mh.message_id = m2.id AND mh.user_id = ${user_id}
+            )
+      ) AS unread_count
+
+      FROM chat.chats_members cm
+      JOIN chat.chats c ON cm.chat_id = c.id
+
+      LEFT JOIN chat.chats_members cm_other ON (c.type = 'private' AND cm_other.chat_id = c.id AND cm_other.user_id != ${user_id})
+      LEFT JOIN chat.users u_other ON cm_other.user_id = u_other.id
+
+      LEFT JOIN chat.contacts con ON (con.owner_id = ${user_id} AND con.user_id = u_other.id)
+
+      LEFT JOIN LATERAL (
+          SELECT m3.message, m3.created_at, m3.sender_id
+          FROM chat.messages m3
+          WHERE m3.chat_id = c.id
+            AND NOT EXISTS (
+                SELECT 1 FROM chat.messages_hidden mh2 
+                WHERE mh2.message_id = m3.id AND mh2.user_id = ${user_id}
+            )
+          ORDER BY m3.created_at DESC
+          LIMIT 1
+      ) m ON true
+
+      LEFT JOIN chat.users u_sender ON m.sender_id = u_sender.id
+
+      WHERE cm.user_id = ${user_id}
+      ORDER BY c.id, m.created_at DESC NULLS LAST
     `;
 
     response.json(chats);
@@ -155,10 +134,7 @@ ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (re
       const [recipient] = await sql`
         SELECT id FROM chat.users WHERE public_id = ${recipient_public_id}
       `;
-
-      if (!recipient) {
-        throw new Error('User not found');
-      }
+      if (!recipient) throw new Error('User not found');
 
       if (type === 'private') {
         const [existingChat] = await sql`
@@ -171,43 +147,55 @@ ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (re
             AND cm2.user_id = ${recipient.id}
           LIMIT 1
         `;
-
-        if (existingChat) {
-          return existingChat;
-        }
+        if (existingChat) return { newChat: existingChat, newChatAvatar: null };
       }
-      
+
+      let createdPhotoId = null;
+      if (type !== 'private' && avatar && fieldObjectChecking(avatar)) {
+        const [photo] = await sql`
+          INSERT INTO chat.photos (file_url, file_type, file_name, width, height)
+          VALUES (${avatar.file_url}, ${avatar.file_type}, ${avatar.file_name}, ${avatar.width}, ${avatar.height})
+          RETURNING public_id
+        `;
+        createdPhotoId = photo.public_id;
+      }
+
       const [newChat] = await sql`
-        INSERT INTO chat.chats (name, type)
-        VALUES (${name || 'Private Chat'}, ${type})
+        INSERT INTO chat.chats (name, type, photo_id)
+        VALUES (${name || 'Chat'}, ${type}, ${createdPhotoId})
         RETURNING public_id, name, type
       `;
 
-      const participants = [creator_id, recipient.id];
+      const participants = [
+        { user_id: creator_id, role: 'owner' },
+        { user_id: recipient.id, role: 'user' }
+      ];
+
       await sql`
         INSERT INTO chat.chats_members (chat_id, user_id, role)
-        SELECT ${newChat.id}, unnest(${participants}::int[]), 'user'
+        SELECT ${newChat.id}, user_id, role
+        FROM ${sql(participants, 'user_id', 'role')}
       `;
 
-      let newChatAvatar = null;
-      if (avatar && fieldObjectChecking(avatar) && newChat.type !== 'private') {
-        [newChatAvatar] = await sql`
-          INSERT INTO chat.chat_avatars (file_type, file_url, chat_id, is_main)
-          VALUES (${avatar.file_type}, ${avatar.file_url}, SELECT id FROM chat.chats WHERE public_id = ${newChat.public_id}, ${avatar.is_main})
+      let avatarResult = null;
+      if (type === 'private') {
+        [avatarResult] = await sql`
+          SELECT ph.file_url, ph.file_type
+          FROM chat.contacts con
+          LEFT JOIN chat.contact_avatars cav ON (cav.contact_id = con.id AND cav.is_main = true)
+          LEFT JOIN chat.user_profile_photos upp ON (upp.user_id = con.user_id AND upp.is_main = true)
+          LEFT JOIN chat.photos ph ON ph.public_id = COALESCE(cav.photo_id, upp.photo_id)
+          WHERE con.owner_id = ${creator_id} AND con.user_id = ${recipient.id}
         `;
-      }
-      else if (newChat.type === 'private') {
-        [newChatAvatar] = await sql`
-          SELECT file_url, file_type, created_at
-          FROM chat.contact_avatars
-          WHERE contact_id = (SELECT id FROM chat.contacts WHERE owner_id = ${creator_id})
-        `;
+      } 
+      else if (createdPhotoId) {
+        avatarResult = { url: avatar.file_url, type: avatar.file_type };
       }
 
       return {
         newChat,
-        newChatAvatar,
-      }
+        avatar: avatarResult
+      };
     });
 
     response.status(201).json(insertedChat);
