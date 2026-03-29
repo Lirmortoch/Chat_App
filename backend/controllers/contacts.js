@@ -23,7 +23,8 @@ ContactsRouter.get('/', async (request, response) => {
 });
 ContactsRouter.get('/:public_id', async (request, response) => {
   try {
-    const [contact] = await postgreSql`SELECT
+    const [contact] = await postgreSql`
+    SELECT
       c.phone_number, 
       c.email, 
       c.first_name, 
@@ -31,22 +32,30 @@ ContactsRouter.get('/:public_id', async (request, response) => {
       c.created_at, 
       c.public_id,
 
-      CASE WHEN ph.id IS NOT NULL THEN
+      (SELECT json_agg(
         json_build_object(
           'url', ph.file_url,
-          'type', ph.file_type,
-          'width', ph.width,
-          'height', ph.height,
-          'name', ph.file_name,
           'is_main', ca.is_main,
-          'created_at', ca.created_at,
-          'updated_at', ca.updated_at
-        )
-      ELSE NULL END AS avatar
-      FROM chat.contacts c
-      LEFT JOIN chat.contact_avatars ca ON c.id = ca.contact_id
-      LEFT JOIN chat.photos ph ON ca.photo_id = ph.id
-      WHERE c.public_id = ${request.params.public_id}
+          'created_at', ca.created_at
+        ) ORDER BY ca.created_at DESC
+      ) FROM chat.contact_avatars ca 
+        JOIN chat.photos ph ON ca.photo_id = ph.public_id 
+        WHERE ca.contact_id = c.id
+    ) AS custom_avatars_history,
+
+    (SELECT json_agg(
+        json_build_object(
+          'url', ph.file_url,
+          'is_main', upp.is_main,
+          'created_at', upp.created_at
+        ) ORDER BY upp.created_at DESC
+      ) FROM chat.user_profile_photos upp 
+        JOIN chat.photos ph ON upp.photo_id = ph.public_id 
+        WHERE upp.user_id = c.user_id
+    ) AS global_avatars_history
+
+    FROM chat.contacts c
+    WHERE c.public_id = ${request.params.public_id}
     `;
 
     if (!contact) {
@@ -64,7 +73,8 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const contacts = await postgreSql`SELECT
+    const contacts = await postgreSql`
+    SELECT
       c.phone_number, 
       c.email, 
       c.first_name, 
@@ -72,22 +82,41 @@ ContactsRouter.get('/user/:public_id', async (request, response) => {
       c.created_at, 
       c.public_id,
 
-      CASE WHEN ph.id IS NOT NULL THEN
-        json_build_object(
-          'url', ph.file_url,
-          'type', ph.file_type,
-          'width', ph.width,
-          'height', ph.height,
-          'name', ph.file_name,
-          'created_at', ca.created_at,
-          'updated_at', ca.updated_at
-        )
-      ELSE NULL END AS avatar
+        COALESCE(
+          CASE WHEN ph_ca.public_id IS NOT NULL THEN 
+              json_build_object(
+                'url', ph_ca.file_url,
+                'type', ph_ca.file_type,
+                'name', ph_ca.file_name,
+                'height', ph_ca.height,
+                'width', ph_ca.width,
+                'is_main', ca.is_main,
+                'created_at', ca.created_at,
+                'updated_at', ca.updated_at
+              ) 
+          END,
+        
+          CASE WHEN ph_upp.public_id IS NOT NULL THEN 
+              json_build_object(
+                'url', ph_upp.file_url,
+                'type', ph_upp.file_type,
+                'name', ph_upp.file_name,
+                'height', ph_upp.height,
+                'width', ph_upp.width,
+                'is_main', upp.is_main,
+                'created_at', upp.created_at,
+                'updated_at', upp.updated_at
+              ) 
+          END
+        ) AS avatar
       FROM chat.contacts c
-      LEFT JOIN chat.contact_avatars ca ON c.id = ca.contact_id
-      LEFT JOIN chat.photos ph ON ca.photo_id = ph.id
+
+      LEFT JOIN chat.contact_avatars ca ON (ca.contact_id = c.id AND ca.is_main = true)
+      LEFT JOIN chat.photos ph_ca ON ca.photo_id = ph_ca.public_id
+      LEFT JOIN chat.user_profile_photos upp ON (upp.user_id = c.user_id AND upp.is_main = true)
+      LEFT JOIN chat.photos ph_upp ON upp.photo_id = ph_upp.public_id
+
       WHERE c.owner_id = ${user_id}
-        AND ca.is_main = true
     `;
 
     if (!contacts) {
@@ -132,29 +161,27 @@ ContactsRouter.post('/', fieldWhiteList(userList), validator(contactSchema), asy
         RETURNING phone_number, first_name, last_name, email, public_id
       `;
 
-      const [userAvatar] = await sql`
-        SELECT file_type, file_url, is_main, created_at
-        FROM chat.user_profile_photos
-        WHERE user_id = (SELECT id from chat.users WHERE public_id = ${user_public_id})
-          AND is_main = true
+      const [insertedContactAvatar] = await sql`
+        SELECT 
+            CASE 
+                WHEN ph_upp.public_id IS NOT NULL THEN 
+                    json_build_object(
+                        'url', ph_upp.file_url,
+                        'type', ph_upp.file_type,
+                        'name', ph_upp.file_name,
+                        'height', ph_upp.height,
+                        'width', ph_upp.width,
+                        'is_main', upp.is_main,
+                        'created_at', upp.created_at,
+                        'updated_at', upp.updated_at
+                    )
+                ELSE NULL 
+            END AS avatar 
+        FROM chat.contacts c
+        LEFT JOIN chat.user_profile_photos upp ON (upp.user_id = c.user_id AND upp.is_main = true)
+        LEFT JOIN chat.photos ph_upp ON upp.photo_id = ph_upp.public_id
+        WHERE c.owner_id = ${user_id};
       `;
-
-      let insertedContactAvatar = null;
-      if (userAvatar) {
-        [insertedContact] = await sql`
-          INSERT INTO chat.contact_avatars (
-            file_url,
-            file_type,
-            is_main, 
-            created_at,
-            contact_id
-          )
-          VALUES (
-            ${sql({...userAvatar, contact_id: `SELECT id FROM chat.contacts WHERE public_id = ${userAvatar.public_id}`})}
-          )
-          RETURNING file_url, file_type
-        `;
-      }
 
       return {
         insertedContactData,
@@ -192,14 +219,32 @@ ContactsRouter.put('/:public_id', fieldWhiteList(userList), validator(contactSch
 });
 ContactsRouter.put('/contact/avatar/:public_id', fieldWhiteList(userList), validator(contactSchema), async (request, response) => {
   try {
-    const { fieldsData } = request.body;
+    const { avatar, contact_public_id } = request.body;
 
-    const [updatedAvatar] = await postgreSql`
-      UPDATE chat.contact_avatars
-      SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
-      WHERE contact_id = (SELECT id FROM chat.contacts WHERE public_id = ${contactData.public_id})
-      RETURNING file_url, file_type, is_main, created_at, public_id
-    `;
+    const updatedAvatar = postgreSql.begin(async (sql) => {
+      let usersAvatar = null;
+      if (avatar && fieldObjectChecking(avatar)) {
+        const [photo] = await sql`
+          INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
+          ${sql({...avatar.photo})}
+          RETURNING file_type, file_url, file_name, width, height, public_id
+        `;
+
+        [usersAvatar] = await sql`
+          INSERT INTO chat.contact_avatars (is_main, contact_id, photo_id)
+          VALUES (
+            ${avatar.is_main},
+            ${`SELECT id FROM chat.users WHERE public_id = ${contact_public_id}`},
+            ${photo.public_id}
+          )
+          RETURNING is_main
+        `;
+
+        usersAvatar.photo = structuredClone(photo);
+      }
+
+      return usersAvatar
+    });
 
     response.status(201).json(updatedAvatar);
   }

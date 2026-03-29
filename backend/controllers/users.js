@@ -117,7 +117,7 @@ UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (re
             ${`SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`},
             ${photo.public_id}
           )
-          RETURNING is_main, user_id, photo_id
+          RETURNING is_main
         `;
 
         usersAvatar.photo = structuredClone(photo);
@@ -167,7 +167,7 @@ UsersRouter.put('/:public_id', fieldWhiteList(userList), validator(userSchema), 
             ${user_id},
             ${photo.public_id}
           )
-          RETURNING is_main, user_id, photo_id
+          RETURNING is_main
         `;
 
         updatedUserAvatar.photo = structuredClone(photo);
