@@ -1,20 +1,21 @@
 const Joi = require('joi');
+const photoSchema = require('./photo.schema');
 
 const chatSchema = Joi.object({
   name: Joi.string().max(45),
   type: Joi.string().max(25).valid('private-chat', 'private-channel', 'private-group', 'public-channel', 'public-group'),
   // url: Joi.string(),
   recipient_public_id: Joi.string(),
-  avatar: Joi.any(),
-  role: Joi.string().valid('low-admin', 'med-admin', 'high-admin', 'user', 'owner').default('user'),
+  photo: photoSchema,
+  role: Joi.string().valid('low-admin', 'med-admin', 'high-admin', 'user', 'owner').default('user').max(25),
   
-  description: Joi.string(),
+  description: Joi.string().max(255),
 
   deleted: Joi.bool().default(false),
   restricted: Joi.bool().default(false),
 
-  delete_reason: Joi.string(),
-  restrict_reason: Joi.string(),
+  delete_reason: Joi.string().max(125),
+  restrict_reason: Joi.string().max(125),
 });
 
 module.exports = chatSchema;

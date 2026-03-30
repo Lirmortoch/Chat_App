@@ -1,4 +1,5 @@
 const ChatsRouter = require('express').Router();
+const nanoid = require('nanoid');
 
 const postgreSql = require('../db.js');
 const chatSchema = require('../validation/schemas/chat.schema.js');
@@ -130,6 +131,8 @@ ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (re
       return response.status(400).json({ message: "Missing required field" });
     }
 
+    const chatUrl = nanoid(35);
+
     const insertedChat = await postgreSql.begin(async (sql) => {
       const [recipient] = await sql`
         SELECT id FROM chat.users WHERE public_id = ${recipient_public_id}
@@ -161,8 +164,8 @@ ChatsRouter.post('/', fieldWhiteList(userList), validator(chatSchema), async (re
       }
 
       const [newChat] = await sql`
-        INSERT INTO chat.chats (name, type, photo_id)
-        VALUES (${name || 'Chat'}, ${type}, ${createdPhotoId})
+        INSERT INTO chat.chats (name, type, photo_id, url)
+        VALUES (${name || 'Chat'}, ${type}, ${createdPhotoId}, ${chatUrl})
         RETURNING public_id, name, type
       `;
 
