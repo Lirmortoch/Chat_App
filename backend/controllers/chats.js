@@ -230,12 +230,20 @@ ChatsRouter.put('/:public_id', checkChatAccess, fieldWhiteList(userList), valida
 
       let updatedChatAvatar = null;
       if (fields.includes('avatar') && fieldObjectChecking(fieldsData.avatar)) {
-        [updatedChatAvatar] = await sql`
-          UPDATE chat.chat_avatars
-          SET ${sql(fieldsData.avatar, 'file_url', 'file_type', 'is_main')}
-          WHERE chat_id = ${chat_id}
-          RETURNING file_url, file_type, is_main, created_at, public_id
+        const [photo] = await sql`
+          INSERT INTO chat.photos (file_url, file_type, file_name, height, weight)
+          ${sql(fieldsData.avatar.photo)}
+          RETURNING file_url, file_type, file_name, height, weight, public_id
         `;
+
+        [updatedChatAvatar] = await sql`
+          UPDATE chats
+          SET photo_id = ${photo.public_id}
+          WHERE id = ${chat_id}
+          RETURNING photo_id
+        `
+
+        updatedChatAvatar.photo = structuredClone(photo);
       }
 
       return {
