@@ -8,8 +8,14 @@ const config = require('../utils/config.js');
 const { fieldWhiteList, userList, adminList, checkUserPrivileges, fieldObjectChecking } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
-UsersRouter.get('/', async (request, response) => {
+UsersRouter.get('/', checkUserPrivileges, async (request, response) => {
   try {
+    if (request.userRole !== 'owner') {
+      return response.status(403).json({
+        message: 'Access denied: You do not have enough privileges',
+      });
+    }
+
     const users = await postgreSql`
       SELECT public_id
       FROM chat.users
@@ -65,9 +71,9 @@ UsersRouter.get('/:public_id', async (request, response) => {
 
 UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (request, response) => {
   try {
-    const { first_name, last_name, username, password, email, phone_number, role, avatar, repeated_password, user_about } = request.body.fieldsData;
+    const { first_name, last_name, username, password, email, phone_number, avatar, repeated_password, user_about } = request.body.fieldsData;
 
-    if (!first_name || !username || !password || !email || !role || !repeated_password) {
+    if (!first_name || !username || !password || !email || !repeated_password) {
       return response.status(400).json({ message: "Missing required field" });
     }
 
@@ -82,9 +88,6 @@ UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (re
           password_hash,
           email,
           phone_number,
-          deleted,
-          restricted,
-          role,
           user_about
         )
         VALUES (
@@ -94,9 +97,6 @@ UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (re
           ${password_hash},
           ${email},
           ${phone_number},
-          false,
-          false,
-          ${role},
           ${user_about}
         )
         RETURNING public_id, email, name, phone_number, username, role, user_about

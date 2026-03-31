@@ -4,11 +4,17 @@ const postgreSql = require('../db.js');
 const contactSchema = require('../validation/schemas/contact.schema.js');
 
 // const config = require('../utils/config.js');
-const { fieldWhiteList, userList } = require('../utils/middleware.js');
+const { fieldWhiteList, userList, checkUserPrivileges } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
-ContactsRouter.get('/', async (request, response) => {
+ContactsRouter.get('/', checkUserPrivileges, async (request, response) => {
   try {
+    if (request.userRole !== 'owner') {
+      return response.status(403).json({
+        message: 'Access denied: You do not have enough privileges',
+      });
+    }
+    
     const contacts = await postgreSql`
       SELECT public_id
       FROM chat.contacts

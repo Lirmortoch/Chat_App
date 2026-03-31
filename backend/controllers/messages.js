@@ -2,11 +2,17 @@ const MessagesRouter = require('express').Router();
 
 const postgreSql = require('../db.js');
 const messageSchema = require('../validation/schemas/message.schema.js');
-const { checkChatAccess, checkMessageAccess, fieldWhiteList, userList } = require('../utils/middleware.js');
+const { checkChatAccess, checkMessageAccess, fieldWhiteList, userList, checkUserPrivileges } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
-MessagesRouter.get('/', async (request, response) => {
+MessagesRouter.get('/', checkUserPrivileges, async (request, response) => {
   try {
+    if (request.userRole !== 'owner') {
+      return response.status(403).json({
+        message: 'Access denied: You do not have enough privileges',
+      });
+    }
+    
     const messages = await postgreSql`
       SELECT public_id
       FROM chat.messages

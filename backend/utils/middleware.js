@@ -1,9 +1,8 @@
-const { object } = require('joi');
 const postgreSql = require('../db.js');
 
 const checkUserAccess = async (request, response, next) => {
   try {
-    const user_public_id = request.params.user_public_id || request.params.public_id;
+    const identifier = request.cookies.identifier;
 
     const [user] = await postgreSql`
       SELECT * FROM chat.users
@@ -11,7 +10,7 @@ const checkUserAccess = async (request, response, next) => {
     `;
 
     if (!user || user.restricted || user.deleted) {
-      return response.status(403).json({ message: 'Access denied: You are not registered or your account was banned' });
+      return response.status(403).json({ message: 'Access denied: You are not registered or your account was suspended' });
     }
 
     request.user = user;
@@ -33,7 +32,7 @@ const checkUserPrivileges = async (request, response, next) => {
         AND (restricted IS FALSE OR restricted IS NULL)
     `;
 
-    if (!access) {
+    if (!access || access === 'user') {
       return response.status(403).json({
         message: 'Access denied: You do not have any privileges',
       });
@@ -106,7 +105,7 @@ const checkMessageAccess = async (request, response, next) => {
 };
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
-const userList = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about', 'description'];
+const userList = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about', 'description', 'username', 'password', 'repeated_password'];
 
 const fieldWhiteList = (list) => {
   return (request, response, next) => {
