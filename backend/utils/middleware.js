@@ -4,13 +4,25 @@ const checkUserAccess = async (request, response, next) => {
   try {
     const identifier = request.cookies.identifier;
 
+    if (!identifier) {
+      return response.status(401).json({ message: 'Authentication required' });
+    }
+
     const [user] = await postgreSql`
-      SELECT * FROM chat.users
-      WHERE public_id = ${user_public_id}
+      SELECT u.*, s.expired_at
+      FROM chat.sessions s
+      JOIN chat.users u ON s.user_id = u.id
+      WHERE s.identifier = ${identifier}
     `;
 
-    if (!user || user.restricted || user.deleted) {
-      return response.status(403).json({ message: 'Access denied: You are not registered or your account was suspended' });
+    if (!user) {
+      return response.status(401).json({ message: 'Session invalid' });
+    }
+    else if (new Date(user.expired_at) < new Date()) {
+      return response.status(401).json({ message: 'Session expired' });
+    }
+    else if (user.restricted || user.deleted) {
+      return response.status(403).json({ message: 'Account suspended' });
     }
 
     request.user = user;

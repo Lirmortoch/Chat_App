@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
@@ -30,7 +31,8 @@
     "joi": "^18.0.2",
     "libphonenumber-js": "^1.12.40",
     "nanoid": "^5.1.7",
-    "postgres": "^3.4.8"
+    "postgres": "^3.4.8",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

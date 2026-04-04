@@ -69,7 +69,7 @@ UsersRouter.get('/:public_id', async (request, response) => {
   }
 });
 
-UsersRouter.post('/', fieldWhiteList(userList), validator(userSchema), async (request, response) => {
+UsersRouter.post('/signup/', fieldWhiteList(userList), validator(userSchema), async (request, response) => {
   try {
     const { first_name, last_name, username, password, email, phone_number, avatar, repeated_password, user_about } = request.body.fieldsData;
 

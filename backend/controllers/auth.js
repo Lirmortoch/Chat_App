@@ -5,7 +5,7 @@ const config = require('../utils/config.js');
 const { fieldWhiteList, userList, adminList, checkUserPrivileges, fieldObjectChecking } = require('../utils/middleware.js');
 const { validator } = require('../validation/utils/middleware.js');
 
-AuthRouter.post('/login', fieldWhiteList(userList), validator(userSchema), async (request, response) => {
+AuthRouter.post('/user/login', fieldWhiteList(userList), validator(userSchema), async (request, response) => {
   try {
     const { fieldsData, sessionData } = request.body;
 
@@ -38,13 +38,20 @@ AuthRouter.post('/login', fieldWhiteList(userList), validator(userSchema), async
       RETURNING identifier
     `;
 
-    response.status(201).cookie('identifier', session.identifier);;
+    response.cookie('identifier', session.identifier, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      expires: expireDate,
+    });
+
+    response.status(200).json({ message: 'Login successful' });
   } catch (error) {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 });
-AuthRouter.delete('/logout', async (request, response) => {
+AuthRouter.delete('/user/logout', async (request, response) => {
   try {
     const [deletedSession] = await postgreSql`
       DELETE * FROM chat.sessions
@@ -58,3 +65,5 @@ AuthRouter.delete('/logout', async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 });
+
+module.exports = AuthRouter;
