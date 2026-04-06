@@ -1,4 +1,4 @@
-const postgreSql = require('../db.js');
+const middlewareService = require('../services/middlewareService');
 
 const checkUserAccess = async (request, response, next) => {
   try {
@@ -8,12 +8,7 @@ const checkUserAccess = async (request, response, next) => {
       return response.status(401).json({ message: 'Authentication required' });
     }
 
-    const [user] = await postgreSql`
-      SELECT u.*, s.expired_at
-      FROM chat.sessions s
-      JOIN chat.users u ON s.user_id = u.id
-      WHERE s.identifier = ${identifier}
-    `;
+    const user = await middlewareService.getSessionData(identifier);
 
     if (!user) {
       return response.status(401).json({ message: 'Session invalid' });
@@ -33,61 +28,61 @@ const checkUserAccess = async (request, response, next) => {
     response.status(500).json({ message: 'Internal server error during access check' });
   }
 }
-const checkUserPrivileges = async (request, response, next) => {
-  try {
-    const user_id = request.user.id;
+const checkUserPrivileges = (...allowedRoles) => {
+  return async (request, response, next) => {
+    try {
+      const user_id = request.user.id;
 
-    const [access] = await postgreSql`
-      SELECT role FROM chat.users
-      WHERE id = ${user_id}
-        AND (deleted IS FALSE OR deleted IS NULL)
-        AND (restricted IS FALSE OR restricted IS NULL)
-    `;
+      const access = await middlewareService.getUserRole(user_id);
 
-    if (!access || access === 'user') {
-      return response.status(403).json({
-        message: 'Access denied: You do not have any privileges',
-      });
+      if (!access) {
+        return response.status(403).json({
+          message: 'Access denied: You do not have any privileges',
+        });
+      }
+
+      if (!allowedRoles.includes(access.role) && allowedRoles.length !== 0) {
+        return response.status(403).json({
+          message: 'Access denied: You do not have enough privileges',
+        });
+      }
+
+      next();
     }
-
-    request.userRole = access;
-
-    next();
-  }
-  catch (error) {
-    console.error('Middleware Error:', error);
-    response.status(500).json({ message: 'Internal server error during privileges check' });
+    catch (error) {
+      console.error('Middleware Error:', error);
+      response.status(500).json({ message: 'Internal server error during privileges check' });
+    }
   }
 } 
 
-const checkChatAccess = async (request, response, next) => {
-  try {
-    const chat_public_id = request.params.chat_public_id || request.params.public_id;
-    const user_id = request.user.id;
+const checkChatAccess = (...allowedChatRoles) => {
+  return async (request, response, next) => {
+    try {
+      const chat_public_id = request.params.chat_public_id || request.params.public_id;
+      const user_id = request.user.id;
 
-    const [access] = await postgreSql`
-      SELECT cm.chat_id, cm.role
-      FROM chat.chats_members cm
-      JOIN chat.chats c ON cm.chat_id = c.id
-      WHERE c.public_id = ${chat_public_id} 
-        AND cm.user_id = ${user_id}
-        AND (cm.deleted IS FALSE OR cm.deleted IS NULL)
-        AND (cm.restricted IS FALSE OR cm.restricted IS NULL)
-    `;
+      const access = await middlewareService.getChatUserRole(chat_public_id, user_id);
 
-    if (!access) {
-      return response.status(403).json({
-        message: 'Access denied: You are not a member of this chat',
-      });
+      if (!access) {
+        return response.status(403).json({
+          message: 'Access denied: You are not a member of this chat',
+        });
+      }
+
+      if (!allowedChatRoles.includes(access.role) && allowedChatRoles.length !== 0) {
+        return response.status(403).json({
+          message: 'Access denied: You do not have enough privileges',
+        });
+      }
+
+      request.chatInternalId = access.chat_id;
+
+      next();
+    } catch (error) {
+      console.error('Middleware Error:', error);
+      response.status(500).json({ message: 'Internal server error during access check' });
     }
-
-    request.chatInternalId = access.chat_id;
-    request.userRoleInChat = access.role;
-
-    next();
-  } catch (error) {
-    console.error('Middleware Error:', error);
-    response.status(500).json({ message: 'Internal server error during access check' });
   }
 };
 
@@ -96,11 +91,7 @@ const checkMessageAccess = async (request, response, next) => {
     const { message_public_id } = request.params;
     const user_id = request.user.id;
 
-    const [message] = await postgreSql`
-      SELECT public_id, sender_id
-      FROM chat.messages msg
-      WHERE msg.public_id = ${message_public_id}
-    `;
+    const message = await middlewareService.getMessageOwner(message_public_id);
 
     if (!message) return response.status(404).json({ message: 'Message not found' });
 
@@ -115,6 +106,10 @@ const checkMessageAccess = async (request, response, next) => {
     response.status(500).json({ message: 'Internal server error during access check' });
   }
 };
+
+const errorHandler = async (request, response, next) => {
+  
+}
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
 const userList = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about', 'description', 'username', 'password', 'repeated_password'];

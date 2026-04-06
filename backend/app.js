@@ -5,11 +5,11 @@ const cookieParser = require('cookie-parser');
 
 const { checkUserAccess } = require('./utils/middleware');
 
-const AuthRouter = require('./controllers/auth');
-const ChatsRouter = require('./controllers/chats');
+const AuthRouter = require('./routers/authRouter');
+const ChatsRouter = require('./routers/chatsRouter');
 const ContactsRouter = require('./controllers/contacts');
 const MessagesRouter = require('./controllers/messages');
-const UsersRouter = require('./controllers/users');
+const UsersRouter = require('./routers/usersRouter');
 
 const app = express();
 
