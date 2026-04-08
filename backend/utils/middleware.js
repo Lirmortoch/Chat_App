@@ -13,7 +13,7 @@ const checkUserAccess = async (request, response, next) => {
     if (!user) {
       return response.status(401).json({ message: 'Session invalid' });
     }
-    else if (new Date(user.expired_at) < new Date()) {
+    else if (new Date(user.expired_at) > new Date()) {
       return response.status(401).json({ message: 'Session expired' });
     }
     else if (user.restricted || user.deleted) {

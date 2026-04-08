@@ -20,6 +20,8 @@ const getUserRole = async (user_id) => {
 
   return access;
 }
+
+
 const getChatUserRole = async (chat_public_id, user_id) => {
   const [access] = await postgreSql`
     SELECT cm.chat_id, cm.role
@@ -33,6 +35,16 @@ const getChatUserRole = async (chat_public_id, user_id) => {
 
   return access;
 }
+const getUserChatAccess = async (user_id, chat_id) => {
+  const [membership] = await postgreSql`
+    SELECT 1 FROM chat.chats_members cm
+    WHERE cm.chat_id = ${chat_id} 
+      AND cm.user_id = ${user_id}
+      AND cm.deleted = false
+      AND cm.restricted = false
+  `;
+  return Boolean(membership);
+};
 const getMessageOwner = async (message_public_id) => {
   const [message] = await postgreSql`
     SELECT public_id, sender_id
@@ -43,9 +55,21 @@ const getMessageOwner = async (message_public_id) => {
   return message;
 }
 
+const getUserChats = async (user_id) => {
+  const userChats = await postgreSql`
+    SELECT chat_id FROM chat.chat_members WHERE user_id = ${user_id}
+  `;
+
+  return userChats;
+}
+
 module.exports = {
   getSessionData,
   getUserRole,
+
   getChatUserRole,
+  getUserChatAccess,
   getMessageOwner,
+
+  getUserChats,
 }
