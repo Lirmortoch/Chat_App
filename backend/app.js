@@ -7,8 +7,8 @@ const { checkUserAccess } = require('./utils/middleware');
 
 const AuthRouter = require('./routers/authRouter');
 const ChatsRouter = require('./routers/chatsRouter');
-const ContactsRouter = require('./controllers/contacts');
-const MessagesRouter = require('./controllers/messages');
+const ContactsRouter = require('./routers/contactsRouter');
+const MessagesRouter = require('./routers/messagesRouter');
 const UsersRouter = require('./routers/usersRouter');
 
 const app = express();

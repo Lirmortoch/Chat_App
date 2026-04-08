@@ -39,7 +39,7 @@ socketServer.on('connection', (socket) => {
     socket.in(chat_id).emit('stop-typing');
   });
 
-  socket.on('disconnect', () => {\
+  socket.on('disconnect', () => {
     logger.info(`Socket ${socket.id} disconnect`);
   });
 });
