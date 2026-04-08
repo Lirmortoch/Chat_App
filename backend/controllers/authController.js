@@ -24,7 +24,7 @@ const addSession = async (request, response) => {
     const expireDate = new Date();
     expireDate.setHours(expireDate.getHours() + 48);
 
-    const session = await authService.insertSession(user.id, sessionData);
+    const session = await authService.insertSession(user.id, sessionData, expireDate);
 
     response.cookie('identifier', session.identifier, {
       httpOnly: true,

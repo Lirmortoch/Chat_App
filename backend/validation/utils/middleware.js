@@ -1,6 +1,8 @@
 const validator = (schema) => {
   return (request, response, next) => {
-    const fieldsData = request.body;
+    const fieldsData = request.body.fieldsData || request.body.sessionData;
+    const fieldsName = request.body.sessionData === 'undefined' ? 'fieldsData' : 'sessionData';
+
     const { error, value } = schema.validate(fieldsData, {
       abortEarly: false,
     });
@@ -12,7 +14,7 @@ const validator = (schema) => {
       });
     }
 
-    request.body.fieldsData = value;
+    request.body[fieldsName] = value;
     next();
   }
 }

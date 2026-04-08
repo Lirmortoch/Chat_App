@@ -1,9 +1,6 @@
 const postgreSql = require('../db.js');
 
-const insertSession = async (user_id, sessionData) => {
-  const expireDate = new Date();
-  expireDate.setHours(expireDate.getHours() + 48);
-
+const insertSession = async (user_id, sessionData, expireDate) => {
   const [session] = await postgreSql`
     INSERT INTO chat.sessions (user_id, ip_address, user_agent, identifier, expired_at, last_seen_at)
     VALUES (${user_id}, ${postgreSql(sessionData)}, uuidv7(), ${expireDate}, now())

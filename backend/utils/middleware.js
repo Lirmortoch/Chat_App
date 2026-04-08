@@ -113,6 +113,7 @@ const errorHandler = async (request, response, next) => {
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
 const userList = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about', 'description', 'username', 'password', 'repeated_password'];
+const sessionList = ['ip_address', 'user_agent'];
 
 const fieldWhiteList = (list) => {
   return (request, response, next) => {
@@ -143,4 +144,4 @@ const fieldObjectChecking = (object) => {
   return true;
 }
 
-module.exports = { checkUserAccess, checkUserPrivileges, checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList, fieldObjectChecking, };
+module.exports = { checkUserAccess, checkUserPrivileges, checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList, fieldObjectChecking, sessionList, };
