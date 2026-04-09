@@ -18,11 +18,11 @@ app.use(cookieParser());
 app.use(express.json());
 
 const limiter = rateLimit({
- 	windowMs: 10 * 60 * 1000, 
-	limit: 25, 
-	standardHeaders: 'draft-8', 
-	legacyHeaders: false, 
-	ipv6Subnet: 60,
+  windowMs: 10 * 60 * 1000,
+  limit: 25,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  ipv6Subnet: 60,
 });
 app.use('/api/', limiter);
 

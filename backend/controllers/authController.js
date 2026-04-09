@@ -1,5 +1,5 @@
 const usersService = require('../services/usersService.js');
-const authService = require('../services/authService.js')
+const authService = require('../services/authService.js');
 
 const addSession = async (request, response) => {
   try {
@@ -38,20 +38,19 @@ const addSession = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 const deleteSession = async (request, response) => {
   try {
     const [deletedSession] = await authService.deleteSession(request.cookies.identifier);
 
     response.status(201).json(deletedSession);
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 module.exports = {
   addSession,
   deleteSession,
-}
+};

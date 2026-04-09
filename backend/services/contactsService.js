@@ -2,15 +2,20 @@ const postgreSql = require('../db.js');
 const { fieldObjectChecking } = require('../utils/middleware.js');
 
 const getAllContacts = async () => {
-  const contacts = await postgreSql`
+  try {
+    const contacts = await postgreSql`
     SELECT public_id
     FROM chat.contacts
   `;
 
-  return contacts;
-}
+    return contacts;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const getContact = async (public_id) => {
-  const [contact] = await postgreSql`
+  try {
+    const [contact] = await postgreSql`
     SELECT
       c.phone_number, 
       c.email, 
@@ -45,10 +50,14 @@ const getContact = async (public_id) => {
     WHERE c.public_id = ${public_id}
   `;
 
-  return contact;
-}
+    return contact;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const getUsersContacts = async (user_id) => {
-  const contacts = await postgreSql`
+  try {
+    const contacts = await postgreSql`
   SELECT
     c.phone_number, 
     c.email, 
@@ -94,14 +103,18 @@ const getUsersContacts = async (user_id) => {
     WHERE c.owner_id = ${user_id}
   `;
 
-  return contacts;
-}
+    return contacts;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const insertContact = async (fieldsData, ownerId) => {
-  const { first_name, last_name, phone_number, email, user_public_id } = fieldsData;
+  try {
+    const { first_name, last_name, phone_number, email, user_public_id } = fieldsData;
 
-  const insertedContact = await postgreSql.begin(async (sql) => {
-    const [insertedContactData] = await sql`
+    const insertedContact = await postgreSql.begin(async (sql) => {
+      const [insertedContactData] = await sql`
       INSERT INTO chat.contacts (
         phone_number,
         first_name,
@@ -121,7 +134,7 @@ const insertContact = async (fieldsData, ownerId) => {
       RETURNING phone_number, first_name, last_name, email, public_id
     `;
 
-    const [insertedContactAvatar] = await sql`
+      const [insertedContactAvatar] = await sql`
       SELECT 
           CASE 
               WHEN ph_upp.public_id IS NOT NULL THEN 
@@ -143,36 +156,44 @@ const insertContact = async (fieldsData, ownerId) => {
       WHERE c.owner_id = ${user_id};
     `;
 
-    return {
-      insertedContactData,
-      insertedContactAvatar,
-    }
-  });
+      return {
+        insertedContactData,
+        insertedContactAvatar,
+      };
+    });
 
-  return insertedContact;
-}
+    return insertedContact;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const updateContactInfo = async (fieldsData, cols) => {
-  const [updatedContact] = await postgreSql`
+  try {
+    const [updatedContact] = await postgreSql`
     UPDATE chat.contacts
     SET ${sql(fieldsData, cols)}
     WHERE public_id = ${request.params.public_id}
     RETURNING ${cols}
   `;
 
-  return updatedContact;
-}
+    return updatedContact;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const updateContactAvatar = async () => {
-  const updatedAvatar = await postgreSql.begin(async (sql) => {
-    let usersAvatar = null;
-    if (avatar && fieldObjectChecking(avatar)) {
-      const [photo] = await sql`
+  try {
+    const updatedAvatar = await postgreSql.begin(async (sql) => {
+      let usersAvatar = null;
+      if (avatar && fieldObjectChecking(avatar)) {
+        const [photo] = await sql`
         INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
-        ${sql({...avatar.photo})}
+        ${sql({ ...avatar.photo })}
         RETURNING file_type, file_url, file_name, width, height, public_id
       `;
 
-      [usersAvatar] = await sql`
+        [usersAvatar] = await sql`
         INSERT INTO chat.contact_avatars (is_main, contact_id, photo_id)
         VALUES (
           ${avatar.is_main},
@@ -182,24 +203,31 @@ const updateContactAvatar = async () => {
         RETURNING is_main
       `;
 
-      usersAvatar.photo = structuredClone(photo);
-    }
+        usersAvatar.photo = structuredClone(photo);
+      }
 
-    return usersAvatar
-  });
+      return usersAvatar;
+    });
 
-  return updatedAvatar;
-}
+    return updatedAvatar;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const deleteContact = async (public_id) => {
-  const [deletedContact] = await postgreSql`
+  try {
+    const [deletedContact] = await postgreSql`
     DELETE FROM chat.contacts
     WHERE public_id = ${public_id}
     RETURNING phone_number, first_name, last_name, email, public_id
   `;
 
-  return deletedContact;
-}
+    return deletedContact;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 module.exports = {
   getAllContacts,
@@ -212,4 +240,4 @@ module.exports = {
   updateContactAvatar,
 
   deleteContact,
-}
+};

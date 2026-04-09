@@ -12,22 +12,19 @@ const checkUserAccess = async (request, response, next) => {
 
     if (!user) {
       return response.status(401).json({ message: 'Session invalid' });
-    }
-    else if (new Date(user.expired_at) > new Date()) {
+    } else if (new Date(user.expired_at) > new Date()) {
       return response.status(401).json({ message: 'Session expired' });
-    }
-    else if (user.restricted || user.deleted) {
+    } else if (user.restricted || user.deleted) {
       return response.status(403).json({ message: 'Account suspended' });
     }
 
     request.user = user;
     next();
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Middleware Error:', error);
     response.status(500).json({ message: 'Internal server error during access check' });
   }
-}
+};
 const checkUserPrivileges = (...allowedRoles) => {
   return async (request, response, next) => {
     try {
@@ -48,13 +45,12 @@ const checkUserPrivileges = (...allowedRoles) => {
       }
 
       next();
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Middleware Error:', error);
       response.status(500).json({ message: 'Internal server error during privileges check' });
     }
-  }
-} 
+  };
+};
 
 const checkChatAccess = (...allowedChatRoles) => {
   return async (request, response, next) => {
@@ -83,7 +79,7 @@ const checkChatAccess = (...allowedChatRoles) => {
       console.error('Middleware Error:', error);
       response.status(500).json({ message: 'Internal server error during access check' });
     }
-  }
+  };
 };
 
 const checkMessageAccess = async (request, response, next) => {
@@ -107,12 +103,24 @@ const checkMessageAccess = async (request, response, next) => {
   }
 };
 
-const errorHandler = async (request, response, next) => {
-  
-}
+const errorHandler = async (request, response, next) => {};
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
-const userList = ['name', 'message', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'additionals', 'user_about', 'description', 'username', 'password', 'repeated_password'];
+const userList = [
+  'name',
+  'message',
+  'email',
+  'phone_number',
+  'first_name',
+  'last_name',
+  'avatar',
+  'additionals',
+  'user_about',
+  'description',
+  'username',
+  'password',
+  'repeated_password',
+];
 const sessionList = ['ip_address', 'user_agent'];
 
 const fieldWhiteList = (list) => {
@@ -121,10 +129,10 @@ const fieldWhiteList = (list) => {
 
     const fields = Object.keys(fieldsData);
     if (fields.length === 0) {
-      return response.status(400).json({ message: "No valid fields to update or insert" });
+      return response.status(400).json({ message: 'No valid fields to update or insert' });
     }
 
-    fields.forEach(field => {
+    fields.forEach((field) => {
       if (!list.includes(field)) {
         return response.status(400).json({ message: 'Invalid field' });
       }
@@ -134,14 +142,24 @@ const fieldWhiteList = (list) => {
     request.cols = fields.join(', ');
 
     next();
-  }
-}
+  };
+};
 const fieldObjectChecking = (object) => {
   for (const f in object) {
-    if (f !== undefined) return false
+    if (f !== undefined) return false;
   }
 
   return true;
-}
+};
 
-module.exports = { checkUserAccess, checkUserPrivileges, checkChatAccess, checkMessageAccess, fieldWhiteList, userList, adminList, fieldObjectChecking, sessionList, };
+module.exports = {
+  checkUserAccess,
+  checkUserPrivileges,
+  checkChatAccess,
+  checkMessageAccess,
+  fieldWhiteList,
+  userList,
+  adminList,
+  fieldObjectChecking,
+  sessionList,
+};

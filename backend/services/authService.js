@@ -1,24 +1,33 @@
 const postgreSql = require('../db.js');
+const logger = require('../utils/logger.js');
 
 const insertSession = async (user_id, sessionData, expireDate) => {
-  const [session] = await postgreSql`
-    INSERT INTO chat.sessions (user_id, ip_address, user_agent, identifier, expired_at, last_seen_at)
-    VALUES (${user_id}, ${postgreSql(sessionData)}, uuidv7(), ${expireDate}, now())
-    RETURNING identifier
-  `;
+  try {
+    const [session] = await postgreSql`
+      INSERT INTO chat.sessions (user_id, ip_address, user_agent, identifier, expired_at, last_seen_at)
+      VALUES (${user_id}, ${postgreSql(sessionData)}, uuidv7(), ${expireDate}, now())
+      RETURNING identifier
+    `;
 
-  return session;
-}
+    return session;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const deleteSession = async (identifier) => {
-  const [deletedSession] = await postgreSql`
-    DELETE * FROM chat.sessions
-    WHERE identifier = ${identifier}
-  `;
+  try {
+    const [deletedSession] = await postgreSql`
+      DELETE * FROM chat.sessions
+      WHERE identifier = ${identifier}
+    `;
 
-  return deletedSession;
-}
+    return deletedSession;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 module.exports = {
   insertSession,
   deleteSession,
-}
+};

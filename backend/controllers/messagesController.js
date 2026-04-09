@@ -1,4 +1,3 @@
-
 const msgService = require('../services/messagesService.js');
 
 const getAllMessages = async (request, response) => {
@@ -10,7 +9,7 @@ const getAllMessages = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 const getMessage = async (request, response) => {
   try {
     const message = await msgService.getMsg(request.params.message_public_id);
@@ -24,7 +23,7 @@ const getMessage = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 const getChatMsgs = async (request, response) => {
   try {
     const chat_id = request.chatInternalId;
@@ -36,7 +35,7 @@ const getChatMsgs = async (request, response) => {
   } catch (error) {
     response.status(500).json({ error: 'Failed to fetch messages' });
   }
-}
+};
 
 const addNewMessage = async (request, response) => {
   try {
@@ -44,8 +43,8 @@ const addNewMessage = async (request, response) => {
     const chat_id = request.chatInternalId;
     const sender_id = request.user.id;
 
-    if (message === undefined || message === "" && additionals.length === 0) {
-      return response.status(400).json({ message: "Missing required field" });
+    if (message === undefined || (message === '' && additionals.length === 0)) {
+      return response.status(400).json({ message: 'Missing required field' });
     }
 
     const insertedMessage = await msgService.insertMsg(message, additionals, chat_id, sender_id);
@@ -55,14 +54,14 @@ const addNewMessage = async (request, response) => {
     console.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 const updateMsg = async (request, response) => {
   try {
     const { fieldsData } = request.body;
     const fields = request.fields;
     const messageInternalId = request.messageInternalId;
-    
+
     const updatedMessage = await msgService.updateMessage(fieldsData, fields, messageInternalId);
 
     response.status(201).json(updatedMessage);
@@ -70,7 +69,7 @@ const updateMsg = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 const deleteMsg = async (request, response) => {
   try {
@@ -83,7 +82,7 @@ const deleteMsg = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 module.exports = {
   getAllMessages,
@@ -95,4 +94,4 @@ module.exports = {
   updateMsg,
 
   deleteMsg,
-}
+};

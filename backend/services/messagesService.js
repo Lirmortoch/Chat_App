@@ -2,15 +2,20 @@ const postgreSql = require('../db.js');
 const { fieldObjectChecking } = require('../utils/middleware.js');
 
 const getAllMessages = async () => {
-  const messages = await postgreSql`
+  try {
+    const messages = await postgreSql`
     SELECT public_id
     FROM chat.messages
   `;
 
-  return messages;
-}
+    return messages;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const getMsg = async (public_id) => {
-  const [message] = await postgreSql`
+  try {
+    const [message] = await postgreSql`
     SELECT 
       m.message, 
       m.created_at, 
@@ -31,10 +36,14 @@ const getMsg = async (public_id) => {
     WHERE m.public_id = ${public_id};
   `;
 
-  return message;
-}
+    return message;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const getChatMessages = async (user_id, chatId) => {
-  const messages = await postgreSql`
+  try {
+    const messages = await postgreSql`
     WITH updated_member AS (
         UPDATE chat.chats_members
         SET last_read_at = CURRENT_TIMESTAMP
@@ -74,93 +83,107 @@ const getChatMessages = async (user_id, chatId) => {
     ORDER BY m.created_at ASC
   `;
 
-  return messages;
-}
+    return messages;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const insertMsg = async (message, additionals, chat_id, sender_id) => {
-  const insertedMessage = await postgreSql.begin(async (sql) => {
-    const [newMessage] = await sql`
+  try {
+    const insertedMessage = await postgreSql.begin(async (sql) => {
+      const [newMessage] = await sql`
       INSERT INTO chat.messages (chat_id, sender_id, message)
       VALUES (${chat_id}, ${sender_id}, ${message})
       RETURNING created_at, public_id, message
     `;
 
-    let newAdditionals = null;
-    if (additionals && additionals.length > 0) {
-      newAdditionals = await sql`
+      let newAdditionals = null;
+      if (additionals && additionals.length > 0) {
+        newAdditionals = await sql`
         INSERT INTO chat.additionals (file_type, file_url, file_name, message_id)
         ${sql(additionals.map((a) => ({ ...a, message_id: `SELECT id FROM chat.messages WHERE public_id = ${newMessage.public_id}` })))}
         RETURNING file_type, file_url, public_id
       `;
-    }
-    
-    return {
-      newMessage,
-      newAdditionals,
-    }
-  });
+      }
 
-  return insertedMessage;
-}
+      return {
+        newMessage,
+        newAdditionals,
+      };
+    });
+
+    return insertedMessage;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const updateMessage = async (fieldsData, fields, messageInternalId) => {
-  const updatedMessage = await postgreSql.begin(async (sql) => {
-    let updatedMessageData;
-    let messageToReturn;
+  try {
+    const updatedMessage = await postgreSql.begin(async (sql) => {
+      let updatedMessageData;
+      let messageToReturn;
 
-    if (fields.includes('message')) {
-      [updatedMessageData] = await sql`
+      if (fields.includes('message')) {
+        [updatedMessageData] = await sql`
         UPDATE chat.messages
         SET message = ${fieldsData.message},
         WHERE id = ${messageInternalId}
         RETURNING message, public_id
       `;
 
-      messageToReturn = updatedMessageData;
-    }
-    if (fields.includes('additionals') && fieldsData.additionals) {
-      let updatedAdditionals = null;
-      
-      if (fieldsData.additionals.delete) {
-        updatedAdditionals = await sql`
+        messageToReturn = updatedMessageData;
+      }
+      if (fields.includes('additionals') && fieldsData.additionals) {
+        let updatedAdditionals = null;
+
+        if (fieldsData.additionals.delete) {
+          updatedAdditionals = await sql`
           DELETE FROM chat.additionals
           WHERE message_id = ${messageInternalId}
           RETURNING file_type, file_url, file_name, public_id, created_at
         `;
-      }
-      else {
-        updatedAdditionals = await sql`
+        } else {
+          updatedAdditionals = await sql`
           INSERT INTO chat.additionals (file_type, file_url, file_name, message_id)
           ${sql(additionals.map((a) => ({ ...a, message_id: messageInternalId })))}
           RETURNING file_type, file_url, public_id
         `;
-      }
-      
-      messageToReturn = {updatedAdditionals, updatedMessageData}
-    }
+        }
 
-    [updatedMessageData.edited_at] = await sql`
+        messageToReturn = { updatedAdditionals, updatedMessageData };
+      }
+
+      [updatedMessageData.edited_at] = await sql`
       UPDATE chat.messages
       SET edited_at = now()
       WHERE id = ${messageInternalId}
       RETURNING edited_at
     `;
 
-    return messageToReturn;
-  });
+      return messageToReturn;
+    });
 
-  return updatedMessage;
-}
+    return updatedMessage;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const deleteMessage = async (messageInternalId) => {
-  const [deletedMessage] = await postgreSql`
+  try {
+    const [deletedMessage] = await postgreSql`
     DELETE from chat.messages
     WHERE id = ${messageInternalId}
     RETURNING message, public_id, created_at, edited_at
   `;
 
-  return deletedMessage;
-}
+    return deletedMessage;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 module.exports = {
   getAllMessages,
@@ -172,4 +195,4 @@ module.exports = {
   updateMessage,
 
   deleteMessage,
-}
+};

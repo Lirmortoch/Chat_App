@@ -11,7 +11,7 @@ const getAllChats = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 const getUserChats = async (request, response) => {
   try {
     const user_id = request.user.id;
@@ -23,7 +23,7 @@ const getUserChats = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 const createNewChat = async (request, response) => {
   try {
@@ -31,12 +31,19 @@ const createNewChat = async (request, response) => {
     const creator_id = request.user.id;
 
     if (!type || !name) {
-      return response.status(400).json({ message: "Missing required field" });
+      return response.status(400).json({ message: 'Missing required field' });
     }
 
     const chatUrl = nanoid(35);
 
-    const insertedChat = await chatsService.insertChat(recipient_public_id, type, name, avatar, creator_id, chatUrl);
+    const insertedChat = await chatsService.insertChat(
+      recipient_public_id,
+      type,
+      name,
+      avatar,
+      creator_id,
+      chatUrl,
+    );
 
     response.status(201).json(insertedChat);
   } catch (error) {
@@ -44,7 +51,7 @@ const createNewChat = async (request, response) => {
     const status = error.message === 'User not found' ? 404 : 500;
     response.status(status).json({ error: error.message });
   }
-}
+};
 
 const updateChat = async (request, response) => {
   try {
@@ -59,7 +66,7 @@ const updateChat = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 const updateChatAccess = async (request, response) => {
   try {
     const { fieldsData } = request.body;
@@ -68,12 +75,11 @@ const updateChatAccess = async (request, response) => {
     const newAccess = await chatsService.updateChatMembers(fieldsData, cols);
 
     response.status(201).json(newAccess);
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 const deleteChat = async (request, response) => {
   try {
@@ -86,7 +92,7 @@ const deleteChat = async (request, response) => {
     console.log(error);
     response.status(500).json({ message: 'Internal server error' });
   }
-}
+};
 
 module.exports = {
   getAllChats,
@@ -98,4 +104,4 @@ module.exports = {
   updateChatAccess,
 
   deleteChat,
-}
+};

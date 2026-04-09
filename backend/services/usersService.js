@@ -2,15 +2,20 @@ const postgreSql = require('../db.js');
 const { fieldObjectChecking } = require('../utils/middleware.js');
 
 const getAllUsers = async () => {
-  const users = await postgreSql`
+  try {
+    const users = await postgreSql`
     SELECT public_id
     FROM chat.users
   `;
 
-  return users;
-}
+    return users;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const getUser = async (public_id) => {
-  const [user] = await postgreSql`
+  try {
+    const [user] = await postgreSql`
     SELECT
       u.name, 
       u.username, 
@@ -39,23 +44,31 @@ const getUser = async (public_id) => {
     WHERE u.public_id = ${public_id}
   `;
 
-  return user;
-}
+    return user;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const getUserByUsername = async (username) => {
-  const [user] = await postgreSql`
+  try {
+    const [user] = await postgreSql`
     SELECT username, password_hash, id 
     FROM chat.users u
     WHERE u.username = ${username}
   `;
 
-  return user;
-}
+    return user;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const insertUser = async (fieldsData, password_hash) => {
-  const { first_name, last_name, username, email, phone_number, avatar, user_about } = fieldsData;
+  try {
+    const { first_name, last_name, username, email, phone_number, avatar, user_about } = fieldsData;
 
-  const insertedUser = await postgreSql.begin(async (sql) => {
-    const [usersData] = await sql`
+    const insertedUser = await postgreSql.begin(async (sql) => {
+      const [usersData] = await sql`
       INSERT INTO chat.users (
         first_name,
         username,
@@ -76,15 +89,15 @@ const insertUser = async (fieldsData, password_hash) => {
       RETURNING public_id, email, name, phone_number, username, role, user_about
     `;
 
-    let usersAvatar = null;
-    if (avatar && fieldObjectChecking(avatar)) {
-      const [photo] = await sql`
+      let usersAvatar = null;
+      if (avatar && fieldObjectChecking(avatar)) {
+        const [photo] = await sql`
         INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
-        ${sql({...avatar.photo})}
+        ${sql({ ...avatar.photo })}
         RETURNING file_type, file_url, file_name, width, height, public_id
       `;
 
-      [usersAvatar] = await sql`
+        [usersAvatar] = await sql`
         INSERT INTO chat.user_profile_photos (is_main, user_id, photo_id)
         VALUES (
           ${avatar.is_main},
@@ -94,38 +107,42 @@ const insertUser = async (fieldsData, password_hash) => {
         RETURNING is_main
       `;
 
-      usersAvatar.photo = structuredClone(photo);
-    }
+        usersAvatar.photo = structuredClone(photo);
+      }
 
-    return {
-      usersData,
-      usersAvatar, 
-    };
-  });
+      return {
+        usersData,
+        usersAvatar,
+      };
+    });
 
-  return insertedUser;
-}
+    return insertedUser;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const updateUserInfo = async (fieldsData, fields, user_id) => {
-  const updatedUserInfo = await postgreSql.begin(async (sql) => {
-    const cols = fields.filter(f => f !== 'avatar').join(', ');
+  try {
+    const updatedUserInfo = await postgreSql.begin(async (sql) => {
+      const cols = fields.filter((f) => f !== 'avatar').join(', ');
 
-    const [updatedUserData] = await sql`
+      const [updatedUserData] = await sql`
       UPDATE chat.users
       SET ${sql(fieldsData, cols)}
       WHERE id = ${user_id}
       RETURNING ${cols}, public_id
     `;
 
-    let updatedUserAvatar = null;
-    if (fieldsData.avatar && fieldObjectChecking(fieldsData.avatar)) {
-      const [photo] = await sql`
+      let updatedUserAvatar = null;
+      if (fieldsData.avatar && fieldObjectChecking(fieldsData.avatar)) {
+        const [photo] = await sql`
         INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
-        ${sql({...fieldsData.avatar.photo})}
+        ${sql({ ...fieldsData.avatar.photo })}
         RETURNING file_type, file_url, file_name, width, height, public_id
       `;
 
-      [updatedUserAvatar] = await sql`
+        [updatedUserAvatar] = await sql`
         INSERT INTO chat.user_profile_photos (is_main, user_id, photo_id)
         VALUES (
           ${fieldsData.avatar.is_main},
@@ -135,37 +152,48 @@ const updateUserInfo = async (fieldsData, fields, user_id) => {
         RETURNING is_main
       `;
 
-      updatedUserAvatar.photo = structuredClone(photo);
-    }
+        updatedUserAvatar.photo = structuredClone(photo);
+      }
 
-    return {
-      updatedUserData,
-      updatedUserAvatar,
-    }
-  });
+      return {
+        updatedUserData,
+        updatedUserAvatar,
+      };
+    });
 
-  return updatedUserInfo
-}
+    return updatedUserInfo;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 const updateUserAccess = async (fieldsData, cols) => {
-  const [newAccess] = await postgreSql`
+  try {
+    const [newAccess] = await postgreSql`
     UPDATE chat.users
     SET ${postgreSql(fieldsData, cols)}
     WHERE id = ${fieldsData.user_id}
     RETURNING ${cols}
   `;
 
-  return newAccess;
-}
+    return newAccess;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 const deleteUser = async (user_id) => {
-  const [deletedUser] = await postgreSql`
+  try {
+    const [deletedUser] = await postgreSql`
     DELETE FROM chat.users 
     WHERE id = ${user_id}
     RETURNING email, name, phone_number, username, role, deleted, restricted, public_id
   `;
 
-  return deletedUser;
-}
+    return deletedUser;
+  } catch (err) {
+    logger.error(`Error: ${err}`);
+  }
+};
 
 module.exports = {
   getAllUsers,
@@ -178,4 +206,4 @@ module.exports = {
   updateUserAccess,
 
   deleteUser,
-}
+};

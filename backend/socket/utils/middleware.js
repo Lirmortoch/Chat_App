@@ -18,14 +18,12 @@ const checkSocketUserAccess = async (socket, next) => {
     }
 
     const user = await middlewareService.getSessionData(identifier);
-    
+
     if (!user) {
       return new Error({ type: 'auth-error', message: 'Authentication error: Session invalid' });
-    }
-    else if (new Date(user.expired_at) > new Date()) {
+    } else if (new Date(user.expired_at) > new Date()) {
       return new Error({ type: 'auth-error', message: 'Authentication error: Session expired' });
-    }
-    else if (user.restricted || user.deleted) {
+    } else if (user.restricted || user.deleted) {
       return new Error({ type: 'auth-error', message: 'Authentication error: Account suspended' });
     }
 
@@ -35,8 +33,8 @@ const checkSocketUserAccess = async (socket, next) => {
     logger.error('Socket Auth Error:', err);
     return new Error({ type: 'server-error', message: `Internal server error: ${err}` });
   }
-}
+};
 
 module.exports = {
   checkSocketUserAccess,
-}
+};

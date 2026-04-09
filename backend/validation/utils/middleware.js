@@ -10,13 +10,13 @@ const validator = (schema) => {
     if (error) {
       return response.status(400).json({
         message: 'Validation error',
-        details: error.details.map(d => d.message)
+        details: error.details.map((d) => d.message),
       });
     }
 
     request.body[fieldsName] = value;
     next();
-  }
-}
+  };
+};
 
-module.exports = { validator }
+module.exports = { validator };

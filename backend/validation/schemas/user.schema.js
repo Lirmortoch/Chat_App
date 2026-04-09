@@ -8,19 +8,22 @@ const userSchema = Joi.object({
   password: Joi.string().min(12).max(50).pattern(new RegExp('^\S{12,50}$')),
   repeated_password: Joi.ref('password'),
   email: Joi.string().email().max(135),
-  
-	phone_number: Joi.string().custom((value, helper) => {
+
+  phone_number: Joi.string().custom((value, helper) => {
     const parsed_phone_number = parsePhoneNumber(value);
-          
+
     if (!parsed_phone_number.isValid() || !parsed_phone_number.isPossible()) {
-      return helper.message("Phone number is wrong. Enter again");
+      return helper.message('Phone number is wrong. Enter again');
     }
   }),
-  
-	role: Joi.string().valid('low-admin', 'med-admin', 'high-admin', 'user', 'owner').default('user').max(25), 
-	last_name: Joi.string().min(3).max(125),
-	user_about: Joi.string().max(125),
-  
+
+  role: Joi.string()
+    .valid('low-admin', 'med-admin', 'high-admin', 'user', 'owner')
+    .default('user')
+    .max(25),
+  last_name: Joi.string().min(3).max(125),
+  user_about: Joi.string().max(125),
+
   avatar: avatarSchema,
 
   deleted: Joi.bool().default(false),

@@ -3,7 +3,7 @@ const photoSchema = require('./photo.schema');
 
 const avatarSchema = Joi.object({
   is_main: Joi.bool(),
-  
+
   photo: photoSchema,
 });
 

@@ -9,7 +9,7 @@ const logger = require('./utils/logger');
 const httpServer = createServer(app);
 
 const socketServer = new ws.Server(httpServer, {
-  cors: { origin: 'http://localhost:5173', },
+  cors: { origin: 'http://localhost:5173' },
 });
 
 initializeSocket(socketServer);

@@ -10,26 +10,39 @@ const initializeSocket = (io) => {
     logger.info(`User ${socket.user.username} authorized via socket`);
 
     socket.on('setup_user', async () => {
-      socket.join(socket.user.public_id);
+      try {
+        socket.join(socket.user.public_id);
 
-      const userChats = await middlewareService.getUserChats(socket.user.id);
+        const userChats = await middlewareService.getUserChats(socket.user.id);
 
-      userChats.forEach(chat => {
-        socket.join(chat.chat_id); 
-      });
+        userChats.forEach((chat) => {
+          socket.join(chat.chat_id);
+        });
 
-      logger.info(`User - ${user_id} initialized and joined ${userChats.length} chats`);
+        logger.info(`User - ${user_id} initialized and joined ${userChats.length} chats`);
+
+        socket.broadcast.emit('user_status_changed', {
+          user_id: socket.user.public_id,
+          status: 'online',
+        });
+      } catch (err) {
+        logger.error(`Error: ${err}`);
+      }
     });
 
     socket.on('join_chat', async (chat_id) => {
-      const isAllowed = await middlewareService.getUserChatAccess(socket.user.id, chat_id);
+      try {
+        const isAllowed = await middlewareService.getUserChatAccess(socket.user.id, chat_id);
 
-      if (!isAllowed) {
-        return socket.emit('error', 'You do not have access to this chat');
+        if (!isAllowed) {
+          return socket.emit('error', 'You do not have access to this chat');
+        }
+
+        socket.join(chat_id);
+        logger.info(`User ${socket.user.username} joined chat ${chat_id}`);
+      } catch (err) {
+        logger.error(`Error: ${err}`);
       }
-
-      socket.join(chat_id);
-      logger.info(`User ${socket.user.username} joined chat ${chat_id}`);
     });
 
     socket.on('leave_chat', (chat_id) => {
@@ -38,10 +51,10 @@ const initializeSocket = (io) => {
     });
 
     socket.on('chat_typing', (chat_id) => {
-      socket.to(chat_id).emit('typing', { 
-        chat_id, 
-        user_name: socket.user.name, 
-        user_id: socket.user.public_id 
+      socket.to(chat_id).emit('typing', {
+        chat_id,
+        user_name: socket.user.name,
+        user_id: socket.user.public_id,
       });
     });
 
@@ -49,18 +62,32 @@ const initializeSocket = (io) => {
       socket.in(chat_id).emit('stop-typing');
     });
 
-    socket.on('message_received', (chat_id) => {
-      socket.in(chat_id).emit('message_received');
+    socket.on('new_message', (data) => {
+      socket.to(data.chat_id).emit('message_received', data.newMessage);
+    });
+
+    socket.on('message_read', (data) => {
+      socket.to(data.chat_id).emit('user_read_messages', {
+        chat_id: data.chat_id,
+        user_id: socket.user.public_id,
+        last_read_message_id: data.message_id,
+      });
     });
 
     socket.on('disconnect', () => {
       logger.info(`User ${socket.user.username} disconnect`);
+
+      socket.broadcast.emit('user_status_changed', {
+        user_id: socket.user.public_id,
+        status: 'offline',
+        last_seen: new Date(),
+      });
     });
 
     socket.on('error', (err) => {
       logger.info(`Error: ${err}`);
     });
   });
-}
+};
 
 module.exports = initializeSocket;
