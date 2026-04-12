@@ -122,6 +122,7 @@ const userList = [
   'repeated_password',
 ];
 const sessionList = ['ip_address', 'user_agent'];
+const membershipChatList = ['chat_id', 'user_id'];
 
 const fieldWhiteList = (list) => {
   return (request, response, next) => {
@@ -162,4 +163,5 @@ module.exports = {
   adminList,
   fieldObjectChecking,
   sessionList,
+  membershipChatList,
 };

@@ -170,6 +170,11 @@ const updateMessage = async (fieldsData, fields, messageInternalId) => {
     logger.error(`Error: ${err}`);
   }
 };
+// const setReadMessages = async () => {
+//   const readedMessages = await postgreSql``;
+
+//   return readedMessages;
+// }
 
 const deleteMessage = async (messageInternalId) => {
   try {
@@ -193,6 +198,7 @@ module.exports = {
   insertMsg,
 
   updateMessage,
+  setReadMessages,
 
   deleteMessage,
 };

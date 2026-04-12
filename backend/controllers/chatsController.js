@@ -45,6 +45,10 @@ const createNewChat = async (request, response) => {
       chatUrl,
     );
 
+    const ws = request.app.get('ws');
+    ws.to(recipient_public_id).emit('join_chat');
+    ws.to(creator_id).emit('join_chat');
+
     response.status(201).json(insertedChat);
   } catch (error) {
     console.error('Chat creation error:', error);

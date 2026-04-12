@@ -5,7 +5,7 @@ const addSession = async (request, response) => {
   try {
     const { fieldsData, sessionData } = request.body;
 
-    const user = usersService.getUserByUsername(fieldsData.username);
+    const user = await usersService.getUserByUsername(fieldsData.username);
 
     if (!user) {
       return response.status(401).json({

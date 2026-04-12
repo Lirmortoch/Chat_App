@@ -49,6 +49,9 @@ const addNewMessage = async (request, response) => {
 
     const insertedMessage = await msgService.insertMsg(message, additionals, chat_id, sender_id);
 
+    const ws = request.app.get('ws');
+    ws.to({chat_id, newMessage: insertedMessage}).emit('new_message');
+
     response.status(201).json(insertedMessage);
   } catch (error) {
     console.error(error);
