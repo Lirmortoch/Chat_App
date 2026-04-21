@@ -1,10 +1,10 @@
-const { createServer } = require('node:http');
-const ws = require('socket.io');
+import { createServer } from 'node:http';
+import ws from 'socket.io';
 
-const app = require('./app'); // the actual Express application
-const initializeSocket = require('./socket/index');
-const config = require('./utils/config');
-const logger = require('./utils/logger');
+import app from './app.js'; // the actual Express application
+import initializeSocket from './socket/index.js';
+import config from './utils/config.js';
+import logger from './utils/logger.js';
 
 const httpServer = createServer(app);
 

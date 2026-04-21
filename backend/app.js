@@ -1,15 +1,15 @@
-const express = require('express');
-const helmet = require('helmet');
-const { rateLimit } = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
+import express from 'express';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 
-const { checkUserAccess } = require('./utils/middleware');
+import { checkUserAccess } from './utils/middleware.js';
 
-const AuthRouter = require('./routers/authRouter');
-const ChatsRouter = require('./routers/chatsRouter');
-const ContactsRouter = require('./routers/contactsRouter');
-const MessagesRouter = require('./routers/messagesRouter');
-const UsersRouter = require('./routers/usersRouter');
+import AuthRouter from './routers/authRouter.js';
+import ChatsRouter from './routers/chatsRouter.js';
+import ContactsRouter from './routers/contactsRouter.js';
+import MessagesRouter from './routers/messagesRouter.js';
+import UsersRouter from './routers/usersRouter.js';
 
 const app = express();
 
@@ -34,4 +34,4 @@ app.use('/api/marazam/contacts', ContactsRouter);
 app.use('/api/marazam/messages', MessagesRouter);
 app.use('/api/marazam/users', UsersRouter);
 
-module.exports = app;
+export default app;

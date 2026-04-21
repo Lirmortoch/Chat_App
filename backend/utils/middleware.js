@@ -1,4 +1,4 @@
-const middlewareService = require('../services/middlewareService');
+import middlewareService from '../services/middlewareService.js';
 
 const checkUserAccess = async (request, response, next) => {
   try {
@@ -103,7 +103,7 @@ const checkMessageAccess = async (request, response, next) => {
   }
 };
 
-const errorHandler = async (request, response, next) => {};
+// const errorHandler = async (request, response, next) => {};
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
 const userList = [
@@ -153,7 +153,7 @@ const fieldObjectChecking = (object) => {
   return true;
 };
 
-module.exports = {
+export default {
   checkUserAccess,
   checkUserPrivileges,
   checkChatAccess,

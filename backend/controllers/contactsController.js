@@ -1,4 +1,5 @@
-const contactsService = require('../services/contactsService.js');
+import contactsService from '../services/contactsService.js';
+import logger from '../utils/logger.js';
 
 const getAllContacts = async (request, response) => {
   try {
@@ -6,7 +7,7 @@ const getAllContacts = async (request, response) => {
 
     response.json(contacts);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -20,7 +21,7 @@ const getContact = async (request, response) => {
 
     response.json(contact);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -36,7 +37,7 @@ const getUserContacts = async (request, response) => {
 
     response.json(contacts);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -54,7 +55,7 @@ const addNewContact = async (request, response) => {
 
     response.status(201).json(insertedContact);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -65,11 +66,11 @@ const updateContactInfo = async (request, response) => {
     const fields = request.fields;
 
     const cols = fields.filter((f) => f !== 'avatar').join(', ');
-    const updatedContact = await contactsService.updateContactInfo(fieldsData, cols);
+    const updatedContact = await contactsService.updateContactInfo(fieldsData, cols, request.params.public_id);
 
     response.status(201).json(updatedContact);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -81,7 +82,7 @@ const updateContactAvatar = async (request, response) => {
 
     response.status(201).json(updatedAvatar);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -92,12 +93,12 @@ const deleteContact = async (request, response) => {
 
     response.status(201).json(deletedContact);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 
-module.exports = {
+export default {
   getAllContacts,
   getContact,
   getUserContacts,

@@ -1,5 +1,6 @@
-const postgreSql = require('../db.js');
-const { fieldObjectChecking } = require('../utils/middleware.js');
+import postgreSql from '../db.js';
+// import { fieldObjectChecking } from '../utils/middleware.js';
+import logger from '../utils/logger.js';
 
 const getAllUsers = async () => {
   try {
@@ -195,7 +196,7 @@ const deleteUser = async (user_id) => {
   }
 };
 
-module.exports = {
+export default {
   getAllUsers,
   getUser,
   getUserByUsername,

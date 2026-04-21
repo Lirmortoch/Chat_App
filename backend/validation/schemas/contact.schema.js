@@ -1,6 +1,7 @@
-const Joi = require('joi');
-const parsePhoneNumber = require('libphonenumber-js');
-const avatarSchema = require('./avatar.schema');
+import Joi from 'joi';
+import parsePhoneNumber from 'libphonenumber-js';
+
+import avatarSchema from './avatar.schema.js';
 
 const contactSchema = Joi.object({
   first_name: Joi.string().min(3).max(125),
@@ -18,4 +19,4 @@ const contactSchema = Joi.object({
   avatar: avatarSchema,
 });
 
-module.exports = contactSchema;
+export default contactSchema;

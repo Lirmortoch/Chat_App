@@ -1,17 +1,18 @@
-const ChatsRouter = require('express').Router();
+import express from 'express';
+const ChatsRouter = express.Router();
 
-const chatsController = require('../controllers/chatsController.js');
+import chatsController from '../controllers/chatsController.js';
 
-const chatSchema = require('../validation/schemas/chat.schema.js');
-const {
+import chatSchema from '../validation/schemas/chat.schema.js';
+import {
   checkChatAccess,
   fieldWhiteList,
   userList,
   adminList,
   checkUserPrivileges,
   membershipChatList,
-} = require('../utils/middleware.js');
-const { validator } = require('../validation/utils/middleware.js');
+} from '../utils/middleware.js';
+import { validator } from '../validation/utils/middleware.js';
 
 ChatsRouter.get('/', checkUserPrivileges('owner'), chatsController.getAllChats);
 // ChatsRouter.get('/chat/:public_id', checkChatAccess(), async (request, response) => {
@@ -62,4 +63,4 @@ ChatsRouter.put(
 
 ChatsRouter.delete('/:public_id', checkChatAccess('owner'), chatsController.deleteChat);
 
-module.exports = ChatsRouter;
+export default ChatsRouter;

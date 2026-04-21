@@ -1,7 +1,7 @@
-const middlewareService = require('../services/middlewareService');
-const logger = require('../utils/logger');
+import middlewareService from '../services/middlewareService.js';
+import logger from '../utils/logger.js';
 
-const socketMiddleware = require('./utils/middleware');
+import socketMiddleware from './utils/middleware.js';
 
 const initializeSocket = (io) => {
   io.use(socketMiddleware.checkSocketUserAccess);
@@ -19,7 +19,7 @@ const initializeSocket = (io) => {
           socket.join(chat.chat_id);
         });
 
-        logger.info(`User - ${user_id} initialized and joined ${userChats.length} chats`);
+        logger.info(`User - ${socket.user.public_id} initialized and joined ${userChats.length} chats`);
 
         socket.broadcast.emit('user_status_changed', {
           user_id: socket.user.public_id,
@@ -85,9 +85,9 @@ const initializeSocket = (io) => {
     });
 
     socket.on('error', (err) => {
-      logger.info(`Error: ${err}`);
+      logger.error(`Error: ${err}`);
     });
   });
 };
 
-module.exports = initializeSocket;
+export default initializeSocket;

@@ -1,5 +1,7 @@
+import dotenv from 'dotenv';
+
 if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
+  dotenv.config();
 }
 
 const SERVER_PORT = process.env.SERVER_PORT;
@@ -8,7 +10,7 @@ const POSTGRE_DB_USERNAME = process.env.POSTGRE_DB_USERNAME;
 const POSTGRE_DB_PASSWORD = process.env.POSTGRE_DB_PASSWORD;
 const SALT_ROUNDS = process.env.SALT_ROUNDS;
 
-module.exports = {
+export default {
   SERVER_PORT,
   POSTGRE_DB_URI,
   POSTGRE_DB_USERNAME,

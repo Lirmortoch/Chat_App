@@ -1,5 +1,8 @@
-const usersService = require('../services/usersService.js');
-const authService = require('../services/authService.js');
+import bcrypt from 'bcrypt';
+
+import logger from '../utils/logger.js';
+import usersService from '../services/usersService.js';
+import authService from '../services/authService.js';
 
 const addSession = async (request, response) => {
   try {
@@ -35,7 +38,7 @@ const addSession = async (request, response) => {
 
     response.status(200).json({ message: 'Login successful' });
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -45,12 +48,12 @@ const deleteSession = async (request, response) => {
 
     response.status(201).json(deletedSession);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 
-module.exports = {
+export default {
   addSession,
   deleteSession,
 };

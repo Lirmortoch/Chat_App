@@ -1,11 +1,12 @@
-const AuthRouter = require('express').Router();
+import express from 'express';
+const AuthRouter = express.Router();
 
-const AuthController = require('../controllers/authController.js');
-const { fieldWhiteList, userList, sessionList } = require('../utils/middleware.js');
+import AuthController from '../controllers/authController.js';
+import { fieldWhiteList, userList, sessionList } from '../utils/middleware.js';
 
-const { validator } = require('../validation/utils/middleware.js');
-const userSchema = require('../validation/schemas/user.schema.js');
-const sessionSchema = require('../validation/schemas/session.schema.js');
+import { validator } from '../validation/utils/middleware.js';
+import userSchema from '../validation/schemas/user.schema.js';
+import sessionSchema from '../validation/schemas/session.schema.js';
 
 AuthRouter.post(
   '/user/login',
@@ -17,4 +18,4 @@ AuthRouter.post(
 );
 AuthRouter.delete('/user/logout', AuthController.deleteSession);
 
-module.exports = AuthRouter;
+export default AuthRouter;

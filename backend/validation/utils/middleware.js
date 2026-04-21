@@ -19,4 +19,4 @@ const validator = (schema) => {
   };
 };
 
-module.exports = { validator };
+export default { validator };

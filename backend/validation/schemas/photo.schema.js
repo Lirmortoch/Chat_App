@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const photoSchema = Joi.object({
   file_name: Joi.string().max(50),
@@ -8,4 +8,4 @@ const photoSchema = Joi.object({
   width: Joi.number().max(1440).min(500),
 });
 
-module.exports = photoSchema;
+export default photoSchema;

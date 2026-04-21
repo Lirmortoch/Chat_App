@@ -1,79 +1,85 @@
-const postgres = require('../../db.js');
+import nanoid from 'nanoid';
+
+import postgreSql from '../../db.js';
+import logger from '../../utils/logger.js';
 
 async function seed() {
-  console.log('🌱 Начинаем сидирование базы данных...');
+  logger.info('🌱 Seeding process started...');
 
   try {
-    console.log('🧹 Очистка старых данных...');
-    await postgres`
+    logger.info('🧹 Cleanup old data...');
+    await postgreSql`
       TRUNCATE TABLE chat.photos, chat.users, chat.chats, chat.contacts CASCADE
     `;
 
-    console.log('📸 Добавляем фотографии...');
+    logger.info('📸 adding photos...');
     const photosData = [
-      { file_url: '/public/imgs/user1.jpg', file_type: 'image/jpeg', file_name: 'user1.jpg', width: 800, height: 800 },
-      { file_url: '/public/imgs/user2.jpg', file_type: 'image/jpeg', file_name: 'user2.jpg', width: 800, height: 800 },
-      { file_url: '/public/imgs/group.jpg', file_type: 'image/jpeg', file_name: 'group.jpg', width: 1024, height: 1024 },
+      { file_url: '../tests/public/imgs/user1.jpg', file_type: 'image/jpeg', file_name: 'user1.jpg', width: 800, height: 800 },
+      { file_url: '../tests/public/imgs/user2.jpg', file_type: 'image/jpeg', file_name: 'user2.jpg', width: 800, height: 800 },
+      { file_url: '../tests/public/imgs/group.jpg', file_type: 'image/jpeg', file_name: 'group.jpg', width: 1024, height: 1024 },
     ];
-    const photos = await postgres`
-      INSERT INTO chat.photos ${postgres(photosData, 'file_url', 'file_type', 'file_name', 'width', 'height')}
+    const photos = await postgreSql`
+      INSERT INTO chat.photos ${postgreSql(photosData, 'file_url', 'file_type', 'file_name', 'width', 'height')}
       RETURNING id, public_id
     `;
 
-    console.log('👤 Добавляем пользователей...');
+    logger.info('👤 adding users...');
     const usersData = [
-      { first_name: 'Иван', last_name: 'Иванов', username: 'ivanov', password_hash: 'dummy_hash_1', email: 'ivan@example.com', phone_number: '+1234567890' },
+      { first_name: 'Иван', last_name: 'Иванов', username: 'ivanov', password_hash: 'dummy_hash_1', email: 'ivan@example.com', phone_number: '+1234567890', role: 'owner' },
       { first_name: 'Анна', last_name: 'Смирнова', username: 'anna_s', password_hash: 'dummy_hash_2', email: 'anna@example.com', phone_number: '+0987654321' }
     ];
-    const users = await postgres`
-      INSERT INTO chat.users ${postgres(usersData, 'first_name', 'last_name', 'username', 'password_hash', 'email', 'phone_number')}
+    const users = await postgreSql`
+      INSERT INTO chat.users ${postgreSql(usersData, 'first_name', 'last_name', 'username', 'password_hash', 'email', 'phone_number')}
       RETURNING id, public_id, username
     `;
 
-    console.log('🖼️ Привязываем аватарки к профилям...');
+    logger.info('🖼️ linking avatars to users...');
     const userProfilePhotosData = [
       { user_id: users[0].id, photo_id: photos[0].public_id, is_main: true },
-      { user_id: users[1].id, photo_id: photos[1].public_id, is_main: true }
+      { user_id: users[1].id, photo_id: photos[1].public_id, is_main: true },
     ];
-    await postgres`
-      INSERT INTO chat.user_profile_photos ${postgres(userProfilePhotosData, 'user_id', 'photo_id', 'is_main')}
+    await postgreSql`
+      INSERT INTO chat.user_profile_photos ${postgreSql(userProfilePhotosData, 'user_id', 'photo_id', 'is_main')}
     `;
 
-    console.log('💬 Создаем чаты...');
+    logger.info('💬 adding chats...');
+    const chatUrl1 = nanoid(65);
+    const chatUrl2 = nanoid(65);
+
     const chatsData = [
-      { name: 'Приватный чат', type: 'private', description: 'Личная переписка' }, // Без фото
-      { name: 'Рабочая группа', type: 'group', description: 'Обсуждение проекта', photo_id: photos[2].public_id }
+      { name: 'Private chat', type: 'private-chat', description: '', photo_id: null, url: chatUrl1 }, // without photo
+      { name: 'Work group', type: 'private-group', description: 'Обсуждение проекта', photo_id: photos[2].public_id, url: chatUrl2 }
     ];
-    const chats = await postgres`
-      INSERT INTO chat.chats ${postgres(chatsData, 'name', 'type', 'description', 'photo_id')}
+    const chats = await postgreSql`
+      INSERT INTO chat.chats ${postgreSql(chatsData, 'name', 'type', 'description', 'photo_id', 'url')}
       RETURNING id
     `;
 
-    console.log('🤝 Добавляем участников в чаты...');
+    logger.info('🤝 Adding chat participants...');
     const membersData = [
-      { chat_id: chats[0].id, user_id: users[0].id, role: 'user' },
-      { chat_id: chats[0].id, user_id: users[1].id, role: 'user' },
+      { chat_id: chats[0].id, user_id: users[0].id, role: 'owner' },
+      { chat_id: chats[0].id, user_id: users[1].id, role: 'owner' },
 
-      { chat_id: chats[1].id, user_id: users[0].id, role: 'admin' },
+      { chat_id: chats[1].id, user_id: users[0].id, role: 'owner' },
       { chat_id: chats[1].id, user_id: users[1].id, role: 'user' }
     ];
-    await postgres`
-      INSERT INTO chat.chats_members ${postgres(membersData, 'chat_id', 'user_id', 'role')}
+    await postgreSql`
+      INSERT INTO chat.chats_members ${postgreSql(membersData, 'chat_id', 'user_id', 'role')}
     `;
 
-    console.log('✉️ Создаем сообщения...');
+    logger.info('✉️ Creating messages...');
     const messagesData = [
       { chat_id: chats[0].id, sender_id: users[0].id, message: 'Привет, Анна!' },
       { chat_id: chats[0].id, sender_id: users[1].id, message: 'Привет, Иван! Как дела?' },
       { chat_id: chats[1].id, sender_id: users[0].id, message: 'Коллеги, начинаем работу над проектом.' }
     ];
-    const messages = await postgres`
-      INSERT INTO chat.messages ${postgres(messagesData, 'chat_id', 'sender_id', 'message')}
+    await postgreSql`
+      INSERT INTO chat.messages ${postgreSql(messagesData, 'chat_id', 'sender_id', 'message')}
       RETURNING id
     `;
 
-    console.log('🔑 Генерируем активную сессию...');
-    await postgres`
+    logger.info('🔑 creating active session..');
+    const [session] = await postgreSql`
       INSERT INTO chat.sessions (user_id, expired_at, last_seen_at, ip_address, user_agent, identifier)
       VALUES (
         ${users[0].id}, 
@@ -83,14 +89,15 @@ async function seed() {
         'Mozilla/5.0 (Seed Data)', 
         uuidv7()
       )
+      RETURNING identifier
     `;
 
-    console.log('✅ Сидирование успешно завершено!');
+    logger.info('✅ Seeding process was successfully end!');
+
+    return session;
   } catch (err) {
-    console.error('❌ Ошибка при сидировании:', err);
-  } finally {
-    await postgres.end();
+    logger.error('❌ Seeding error:', err);
   }
 }
 
-module.exports = seed;
+export default seed;

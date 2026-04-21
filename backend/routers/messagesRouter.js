@@ -1,15 +1,16 @@
-const MessagesRouter = require('express').Router();
+import express from 'express';
+const MessagesRouter = express.Router();
 
-const messageController = require('../controllers/messagesController.js');
-const messageSchema = require('../validation/schemas/message.schema.js');
-const {
+import messageController from '../controllers/messagesController.js';
+import messageSchema from '../validation/schemas/message.schema.js';
+import {
   checkChatAccess,
   checkMessageAccess,
   fieldWhiteList,
   userList,
   checkUserPrivileges,
-} = require('../utils/middleware.js');
-const { validator } = require('../validation/utils/middleware.js');
+} from '../utils/middleware.js';
+import { validator } from '../validation/utils/middleware.js';
 
 MessagesRouter.get('/', checkUserPrivileges('owner'), messageController.getAllMessages);
 MessagesRouter.get('/message/:message_public_id', messageController.getMessage);
@@ -39,4 +40,4 @@ MessagesRouter.delete(
   messageController.deleteMsg,
 );
 
-module.exports = MessagesRouter;
+export default MessagesRouter;

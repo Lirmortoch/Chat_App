@@ -11,7 +11,7 @@
   ],
   "license": "GPL-3.0",
   "author": "Lirmortoch",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "cross-env NODE_ENV=production node index.js",
@@ -38,6 +38,7 @@
   "devDependencies": {
     "cross-env": "^10.1.0",
     "prettier": "3.8.1",
-    "supertest": "^7.2.2"
+    "supertest": "^7.2.2",
+    "eslint": "^9.39.1"
   }
 }

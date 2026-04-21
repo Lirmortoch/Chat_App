@@ -1,12 +1,12 @@
-const Joi = require('joi');
-const photoSchema = require('./photo.schema');
+import Joi from 'joi';
+import photoSchema from './photo.schema.js';
 
 const chatSchema = Joi.object({
   name: Joi.string().max(45),
   type: Joi.string()
     .max(25)
     .valid('private-chat', 'private-channel', 'private-group', 'public-channel', 'public-group'),
-  // url: Joi.string(),
+  url: Joi.string(),
   recipient_public_id: Joi.string(),
   photo: photoSchema,
   role: Joi.string()
@@ -23,4 +23,4 @@ const chatSchema = Joi.object({
   restrict_reason: Joi.string().max(125),
 });
 
-module.exports = chatSchema;
+export default chatSchema;

@@ -1,17 +1,17 @@
-const postgres = require('postgres');
+import postgres from 'postgres';
 
-const config = require('./utils/config');
-const logger = require('./utils/logger');
+import config from './utils/config.js';
+import logger from './utils/logger.js';
 
 logger.info('Connecting to database');
 
 const postgreSql = postgres(config.POSTGRE_DB_URI, {
   username: config.POSTGRE_DB_USERNAME,
   password: config.POSTGRE_DB_PASSWORD,
-  ssl: 'require',
+  // ssl: 'require',
   max: 10,
   idle_timeout: 30,
   connect_timeout: 10,
 });
 
-module.exports = { postgreSql };
+export default postgreSql;

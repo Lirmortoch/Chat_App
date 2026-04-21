@@ -1,10 +1,11 @@
-const ContactsRouter = require('express').Router();
+import express from 'express';
+const ContactsRouter = express.Router();
 
-const contactsController = require('../controllers/contactsController.js');
-const contactSchema = require('../validation/schemas/contact.schema.js');
+import contactsController from '../controllers/contactsController.js';
+import contactSchema from '../validation/schemas/contact.schema.js';
 
-const { fieldWhiteList, userList, checkUserPrivileges } = require('../utils/middleware.js');
-const { validator } = require('../validation/utils/middleware.js');
+import { fieldWhiteList, userList, checkUserPrivileges } from '../utils/middleware.js';
+import { validator } from '../validation/utils/middleware.js';
 
 ContactsRouter.get('/', checkUserPrivileges('owner'), contactsController.getAllContacts);
 ContactsRouter.get('/:public_id', contactsController.getContact);
@@ -32,4 +33,4 @@ ContactsRouter.put(
 
 ContactsRouter.delete('/:public_id', contactsController.deleteContact);
 
-module.exports = ContactsRouter;
+export default ContactsRouter;

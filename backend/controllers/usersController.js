@@ -1,7 +1,8 @@
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt';
 
-const usersService = require('../services/usersService.js');
-const config = require('../utils/config.js');
+import usersService from '../services/usersService.js';
+import config from '../utils/config.js';
+import logger from '../utils/logger.js';
 
 const getUsers = async (request, response) => {
   try {
@@ -9,7 +10,7 @@ const getUsers = async (request, response) => {
 
     response.json(users);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -23,7 +24,7 @@ const getUser = async (request, response) => {
 
     response.json(user);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: `Internal server error` });
   }
 };
@@ -43,7 +44,7 @@ const signupUser = async (request, response) => {
 
     response.status(201).json(insertedUser);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: `Internal server error` });
   }
 };
@@ -58,7 +59,7 @@ const updateUserInfo = async (request, response) => {
 
     response.status(201).json(updatedUser);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: `Internal server error` });
   }
 };
@@ -71,7 +72,7 @@ const updateUserPrivileges = async (request, response) => {
 
     response.status(201).json(newAccess);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: `Internal server error` });
   }
 };
@@ -84,12 +85,12 @@ const deleteUser = async (request, response) => {
 
     response.status(201).json(deletedUser);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: `Internal server error` });
   }
 };
 
-module.exports = {
+export default {
   getUsers,
   getUser,
 

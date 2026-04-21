@@ -1,4 +1,5 @@
-const postgreSql = require('../db.js');
+import postgreSql from '../db.js';
+import logger from '../utils/logger.js';
 
 const getSessionData = async (identifier) => {
   try {
@@ -86,7 +87,7 @@ const getUserChats = async (user_id) => {
   }
 };
 
-module.exports = {
+export default {
   getSessionData,
   getUserRole,
 

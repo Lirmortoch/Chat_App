@@ -1,4 +1,5 @@
-const msgService = require('../services/messagesService.js');
+import msgService from '../services/messagesService.js';
+import logger from '../utils/logger.js';
 
 const getAllMessages = async (request, response) => {
   try {
@@ -6,7 +7,7 @@ const getAllMessages = async (request, response) => {
 
     response.json(messages);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -20,7 +21,7 @@ const getMessage = async (request, response) => {
 
     response.json(message);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -33,6 +34,7 @@ const getChatMsgs = async (request, response) => {
 
     response.json(messages);
   } catch (error) {
+    logger.error(error);
     response.status(500).json({ error: 'Failed to fetch messages' });
   }
 };
@@ -69,7 +71,7 @@ const updateMsg = async (request, response) => {
 
     response.status(201).json(updatedMessage);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -82,12 +84,12 @@ const deleteMsg = async (request, response) => {
 
     response.status(201).json(deletedMessage);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 
-module.exports = {
+export default {
   getAllMessages,
   getMessage,
   getChatMsgs,

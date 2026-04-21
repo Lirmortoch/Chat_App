@@ -1,5 +1,6 @@
-const postgreSql = require('../db.js');
-const { fieldObjectChecking } = require('../utils/middleware.js');
+import postgreSql from '../db.js';
+import { fieldObjectChecking } from '../utils/middleware.js';
+import logger from '../utils/logger.js';
 
 const getAllContacts = async () => {
   try {
@@ -153,7 +154,7 @@ const insertContact = async (fieldsData, ownerId) => {
       FROM chat.contacts c
       LEFT JOIN chat.user_profile_photos upp ON (upp.user_id = c.user_id AND upp.is_main = true)
       LEFT JOIN chat.photos ph_upp ON upp.photo_id = ph_upp.public_id
-      WHERE c.owner_id = ${user_id};
+      WHERE c.owner_id = ${ownerId};
     `;
 
       return {
@@ -168,12 +169,12 @@ const insertContact = async (fieldsData, ownerId) => {
   }
 };
 
-const updateContactInfo = async (fieldsData, cols) => {
+const updateContactInfo = async (fieldsData, cols, public_id) => {
   try {
     const [updatedContact] = await postgreSql`
     UPDATE chat.contacts
-    SET ${sql(fieldsData, cols)}
-    WHERE public_id = ${request.params.public_id}
+    SET ${postgreSql(fieldsData, cols)}
+    WHERE public_id = ${public_id}
     RETURNING ${cols}
   `;
 
@@ -182,7 +183,7 @@ const updateContactInfo = async (fieldsData, cols) => {
     logger.error(`Error: ${err}`);
   }
 };
-const updateContactAvatar = async () => {
+const updateContactAvatar = async (avatar, contact_public_id) => {
   try {
     const updatedAvatar = await postgreSql.begin(async (sql) => {
       let usersAvatar = null;
@@ -229,7 +230,7 @@ const deleteContact = async (public_id) => {
   }
 };
 
-module.exports = {
+export default {
   getAllContacts,
   getContact,
   getUsersContacts,

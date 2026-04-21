@@ -1,7 +1,7 @@
-const cookie = require('cookie');
+import cookie from 'cookie';
 
-const middlewareService = require('./services/middlewareService');
-const logger = require('./utils/logger');
+import middlewareService from '../../services/middlewareService.js';
+import logger from '../../utils/logger.js';
 
 const checkSocketUserAccess = async (socket, next) => {
   try {
@@ -35,6 +35,6 @@ const checkSocketUserAccess = async (socket, next) => {
   }
 };
 
-module.exports = {
+export default {
   checkSocketUserAccess,
 };

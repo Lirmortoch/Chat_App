@@ -1,6 +1,8 @@
-const Joi = require('joi');
-const parsePhoneNumber = require('libphonenumber-js');
-const avatarSchema = require('./avatar.schema');
+/* eslint-disable no-useless-escape */
+import Joi from 'joi';
+import parsePhoneNumber from 'libphonenumber-js';
+
+import avatarSchema from './avatar.schema.js';
 
 const userSchema = Joi.object({
   first_name: Joi.string().min(3).max(125),
@@ -33,4 +35,4 @@ const userSchema = Joi.object({
   restrict_reason: Joi.string().max(125),
 });
 
-module.exports = userSchema;
+export default userSchema;

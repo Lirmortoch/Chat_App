@@ -1,5 +1,5 @@
-const Joi = require('joi');
-const photoSchema = require('./photo.schema');
+import Joi from 'joi';
+import photoSchema from './photo.schema.js';
 
 const avatarSchema = Joi.object({
   is_main: Joi.bool(),
@@ -7,4 +7,4 @@ const avatarSchema = Joi.object({
   photo: photoSchema,
 });
 
-module.exports = avatarSchema;
+export default avatarSchema;

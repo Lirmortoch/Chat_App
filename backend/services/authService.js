@@ -1,5 +1,5 @@
-const postgreSql = require('../db.js');
-const logger = require('../utils/logger.js');
+import postgreSql from '../db.js';
+import logger from '../utils/logger.js';
 
 const insertSession = async (user_id, sessionData, expireDate) => {
   try {
@@ -27,7 +27,7 @@ const deleteSession = async (identifier) => {
   }
 };
 
-module.exports = {
+export default {
   insertSession,
   deleteSession,
 };

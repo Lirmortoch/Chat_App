@@ -1,6 +1,7 @@
-const nanoid = require('nanoid');
+import nanoid from 'nanoid';
 
-const chatsService = require('../services/chatsService.js');
+import logger from '../utils/logger.js';
+import chatsService from '../services/chatsService.js';
 
 const getAllChats = async (request, response) => {
   try {
@@ -8,7 +9,7 @@ const getAllChats = async (request, response) => {
 
     response.json(chats);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -20,7 +21,7 @@ const getUserChats = async (request, response) => {
 
     response.json(chats);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -67,7 +68,7 @@ const updateChat = async (request, response) => {
 
     response.status(201).json(updatedChat);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -80,7 +81,7 @@ const updateChatAccess = async (request, response) => {
 
     response.status(201).json(newAccess);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -93,12 +94,12 @@ const deleteChat = async (request, response) => {
 
     response.status(201).json(deletedChat);
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 
-module.exports = {
+export default {
   getAllChats,
   getUserChats,
 

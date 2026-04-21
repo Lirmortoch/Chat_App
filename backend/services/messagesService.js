@@ -1,5 +1,5 @@
-const postgreSql = require('../db.js');
-const { fieldObjectChecking } = require('../utils/middleware.js');
+import postgreSql from '../db.js';
+import logger from '../utils/logger.js';
 
 const getAllMessages = async () => {
   try {
@@ -147,7 +147,7 @@ const updateMessage = async (fieldsData, fields, messageInternalId) => {
         } else {
           updatedAdditionals = await sql`
           INSERT INTO chat.additionals (file_type, file_url, file_name, message_id)
-          ${sql(additionals.map((a) => ({ ...a, message_id: messageInternalId })))}
+          ${sql(fieldsData.additionals.map((a) => ({ ...a, message_id: messageInternalId })))}
           RETURNING file_type, file_url, public_id
         `;
         }
@@ -190,7 +190,7 @@ const deleteMessage = async (messageInternalId) => {
   }
 };
 
-module.exports = {
+export default {
   getAllMessages,
   getMsg,
   getChatMessages,
@@ -198,7 +198,7 @@ module.exports = {
   insertMsg,
 
   updateMessage,
-  setReadMessages,
+  // setReadMessages,
 
   deleteMessage,
 };
