@@ -1,14 +1,14 @@
 import bcrypt from 'bcrypt';
 
-import logger from '../utils/logger.js';
-import usersService from '../services/usersService.js';
-import authService from '../services/authService.js';
+import { error } from '../utils/logger.js';
+import { getUserByUsername } from '../services/usersService.js';
+import {insertSession, deleteSession as _deleteSession} from '../services/authService.js';
 
 const addSession = async (request, response) => {
   try {
     const { fieldsData, sessionData } = request.body;
 
-    const user = await usersService.getUserByUsername(fieldsData.username);
+    const user = await getUserByUsername(fieldsData.username);
 
     if (!user) {
       return response.status(401).json({
@@ -27,7 +27,7 @@ const addSession = async (request, response) => {
     const expireDate = new Date();
     expireDate.setHours(expireDate.getHours() + 48);
 
-    const session = await authService.insertSession(user.id, sessionData, expireDate);
+    const session = await insertSession(user.id, sessionData, expireDate);
 
     response.cookie('identifier', session.identifier, {
       httpOnly: true,
@@ -37,23 +37,23 @@ const addSession = async (request, response) => {
     });
 
     response.status(200).json({ message: 'Login successful' });
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 const deleteSession = async (request, response) => {
   try {
-    const [deletedSession] = await authService.deleteSession(request.cookies.identifier);
+    const [deletedSession] = await _deleteSession(request.cookies.identifier);
 
     response.status(201).json(deletedSession);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export default {
+export {
   addSession,
   deleteSession,
 };

@@ -1,15 +1,22 @@
-import nanoid from 'nanoid';
+import { nanoid } from 'nanoid';
 
-import logger from '../utils/logger.js';
-import chatsService from '../services/chatsService.js';
+import { error } from '../utils/logger.js';
+import {
+  getAllChats as _getAllChats, 
+  getChatsByUser,
+  insertChat,
+  updateChat as _updateChat,
+  updateChatMembers,
+  deleteChat as _deleteChat,
+} from '../services/chatsService.js';
 
 const getAllChats = async (request, response) => {
   try {
-    const chats = await chatsService.getAllChats();
+    const chats = await _getAllChats();
 
     response.json(chats);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -17,11 +24,11 @@ const getUserChats = async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const chats = chatsService.getChatsByUser(user_id);
+    const chats = getChatsByUser(user_id);
 
     response.json(chats);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -37,7 +44,7 @@ const createNewChat = async (request, response) => {
 
     const chatUrl = nanoid(35);
 
-    const insertedChat = await chatsService.insertChat(
+    const insertedChat = await insertChat(
       recipient_public_id,
       type,
       name,
@@ -51,9 +58,9 @@ const createNewChat = async (request, response) => {
     ws.to(creator_id).emit('join_chat');
 
     response.status(201).json(insertedChat);
-  } catch (error) {
-    console.error('Chat creation error:', error);
-    const status = error.message === 'User not found' ? 404 : 500;
+  } catch (err) {
+    error('Chat creation error:', err);
+    const status = err.message === 'User not found' ? 404 : 500;
     response.status(status).json({ error: error.message });
   }
 };
@@ -64,11 +71,11 @@ const updateChat = async (request, response) => {
     const chat_id = request.chatInternalId;
     const fields = request.fields;
 
-    const updatedChat = await chatsService.updateChat(fieldsData, chat_id, fields);
+    const updatedChat = await _updateChat(fieldsData, chat_id, fields);
 
     response.status(201).json(updatedChat);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -77,11 +84,11 @@ const updateChatAccess = async (request, response) => {
     const { fieldsData } = request.body;
     const cols = request.cols;
 
-    const newAccess = await chatsService.updateChatMembers(fieldsData, cols);
+    const newAccess = await updateChatMembers(fieldsData, cols);
 
     response.status(201).json(newAccess);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -90,16 +97,16 @@ const deleteChat = async (request, response) => {
   try {
     const chat_id = request.chatInternalId;
 
-    const deletedChat = await chatsService.deleteChat(chat_id);
+    const deletedChat = await _deleteChat(chat_id);
 
     response.status(201).json(deletedChat);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 
-export default {
+export {
   getAllChats,
   getUserChats,
 

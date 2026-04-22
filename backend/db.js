@@ -1,13 +1,17 @@
 import postgres from 'postgres';
 
-import config from './utils/config.js';
-import logger from './utils/logger.js';
+import {
+  POSTGRE_DB_URI,
+  POSTGRE_DB_USERNAME,
+  POSTGRE_DB_PASSWORD,
+} from './utils/config.js';
+import { info } from './utils/logger.js';
 
-logger.info('Connecting to database');
+info('Connecting to database');
 
-const postgreSql = postgres(config.POSTGRE_DB_URI, {
-  username: config.POSTGRE_DB_USERNAME,
-  password: config.POSTGRE_DB_PASSWORD,
+const postgreSql = postgres(POSTGRE_DB_URI, {
+  username: POSTGRE_DB_USERNAME,
+  password: POSTGRE_DB_PASSWORD,
   // ssl: 'require',
   max: 10,
   idle_timeout: 30,

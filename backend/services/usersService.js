@@ -1,6 +1,6 @@
 import postgreSql from '../db.js';
-// import { fieldObjectChecking } from '../utils/middleware.js';
-import logger from '../utils/logger.js';
+import { fieldObjectChecking } from '../utils/middleware.js';
+import { error } from '../utils/logger.js';
 
 const getAllUsers = async () => {
   try {
@@ -11,7 +11,7 @@ const getAllUsers = async () => {
 
     return users;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getUser = async (public_id) => {
@@ -47,7 +47,7 @@ const getUser = async (public_id) => {
 
     return user;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getUserByUsername = async (username) => {
@@ -60,7 +60,7 @@ const getUserByUsername = async (username) => {
 
     return user;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -119,7 +119,7 @@ const insertUser = async (fieldsData, password_hash) => {
 
     return insertedUser;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -164,7 +164,7 @@ const updateUserInfo = async (fieldsData, fields, user_id) => {
 
     return updatedUserInfo;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const updateUserAccess = async (fieldsData, cols) => {
@@ -178,7 +178,7 @@ const updateUserAccess = async (fieldsData, cols) => {
 
     return newAccess;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -192,11 +192,11 @@ const deleteUser = async (user_id) => {
 
     return deletedUser;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
-export default {
+export {
   getAllUsers,
   getUser,
   getUserByUsername,

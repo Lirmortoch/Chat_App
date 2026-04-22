@@ -1,6 +1,6 @@
 import postgreSql from '../db.js';
 import { fieldObjectChecking } from '../utils/middleware.js';
-import logger from '../utils/logger.js';
+import { error } from '../utils/logger.js';
 
 const getAllContacts = async () => {
   try {
@@ -11,7 +11,7 @@ const getAllContacts = async () => {
 
     return contacts;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getContact = async (public_id) => {
@@ -53,7 +53,7 @@ const getContact = async (public_id) => {
 
     return contact;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getUsersContacts = async (user_id) => {
@@ -106,7 +106,7 @@ const getUsersContacts = async (user_id) => {
 
     return contacts;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -165,7 +165,7 @@ const insertContact = async (fieldsData, ownerId) => {
 
     return insertedContact;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -180,7 +180,7 @@ const updateContactInfo = async (fieldsData, cols, public_id) => {
 
     return updatedContact;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const updateContactAvatar = async (avatar, contact_public_id) => {
@@ -212,7 +212,7 @@ const updateContactAvatar = async (avatar, contact_public_id) => {
 
     return updatedAvatar;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -226,11 +226,11 @@ const deleteContact = async (public_id) => {
 
     return deletedContact;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
-export default {
+export {
   getAllContacts,
   getContact,
   getUsersContacts,

@@ -89,7 +89,7 @@ const deleteMsg = async (request, response) => {
   }
 };
 
-export default {
+export {
   getAllMessages,
   getMessage,
   getChatMsgs,

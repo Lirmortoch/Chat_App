@@ -1,4 +1,5 @@
-import middlewareService from '../services/middlewareService.js';
+import { getSessionData, getUserRole, getChatUserRole, getMessageOwner } from '../services/middlewareService.js';
+import { error } from './logger.js';
 
 const checkUserAccess = async (request, response, next) => {
   try {
@@ -8,7 +9,7 @@ const checkUserAccess = async (request, response, next) => {
       return response.status(401).json({ message: 'Authentication required' });
     }
 
-    const user = await middlewareService.getSessionData(identifier);
+    const user = await getSessionData(identifier);
 
     if (!user) {
       return response.status(401).json({ message: 'Session invalid' });
@@ -21,7 +22,7 @@ const checkUserAccess = async (request, response, next) => {
     request.user = user;
     next();
   } catch (error) {
-    console.error('Middleware Error:', error);
+    error('Middleware Error:', error);
     response.status(500).json({ message: 'Internal server error during access check' });
   }
 };
@@ -30,7 +31,7 @@ const checkUserPrivileges = (...allowedRoles) => {
     try {
       const user_id = request.user.id;
 
-      const access = await middlewareService.getUserRole(user_id);
+      const access = await getUserRole(user_id);
 
       if (!access) {
         return response.status(403).json({
@@ -45,8 +46,8 @@ const checkUserPrivileges = (...allowedRoles) => {
       }
 
       next();
-    } catch (error) {
-      console.error('Middleware Error:', error);
+    } catch (err) {
+      error('Middleware Error:', err);
       response.status(500).json({ message: 'Internal server error during privileges check' });
     }
   };
@@ -58,7 +59,7 @@ const checkChatAccess = (...allowedChatRoles) => {
       const chat_public_id = request.params.chat_public_id || request.params.public_id;
       const user_id = request.user.id;
 
-      const access = await middlewareService.getChatUserRole(chat_public_id, user_id);
+      const access = await getChatUserRole(chat_public_id, user_id);
 
       if (!access) {
         return response.status(403).json({
@@ -75,8 +76,8 @@ const checkChatAccess = (...allowedChatRoles) => {
       request.chatInternalId = access.chat_id;
 
       next();
-    } catch (error) {
-      console.error('Middleware Error:', error);
+    } catch (err) {
+      error('Middleware Error:', err);
       response.status(500).json({ message: 'Internal server error during access check' });
     }
   };
@@ -87,7 +88,7 @@ const checkMessageAccess = async (request, response, next) => {
     const { message_public_id } = request.params;
     const user_id = request.user.id;
 
-    const message = await middlewareService.getMessageOwner(message_public_id);
+    const message = await getMessageOwner(message_public_id);
 
     if (!message) return response.status(404).json({ message: 'Message not found' });
 
@@ -97,8 +98,8 @@ const checkMessageAccess = async (request, response, next) => {
 
     request.messageInternalId = message.id;
     next();
-  } catch (error) {
-    console.error('Middleware Error:', error);
+  } catch (err) {
+    error('Middleware Error:', err);
     response.status(500).json({ message: 'Internal server error during access check' });
   }
 };
@@ -153,7 +154,7 @@ const fieldObjectChecking = (object) => {
   return true;
 };
 
-export default {
+export {
   checkUserAccess,
   checkUserPrivileges,
   checkChatAccess,

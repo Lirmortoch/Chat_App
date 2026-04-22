@@ -90,7 +90,7 @@ const deleteUser = async (request, response) => {
   }
 };
 
-export default {
+export {
   getUsers,
   getUser,
 

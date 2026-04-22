@@ -1,5 +1,5 @@
 import postgreSql from '../db.js';
-import logger from '../utils/logger.js';
+import { error } from '../utils/logger.js';
 
 const getAllMessages = async () => {
   try {
@@ -10,7 +10,7 @@ const getAllMessages = async () => {
 
     return messages;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getMsg = async (public_id) => {
@@ -38,7 +38,7 @@ const getMsg = async (public_id) => {
 
     return message;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getChatMessages = async (user_id, chatId) => {
@@ -85,7 +85,7 @@ const getChatMessages = async (user_id, chatId) => {
 
     return messages;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -115,7 +115,7 @@ const insertMsg = async (message, additionals, chat_id, sender_id) => {
 
     return insertedMessage;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -167,7 +167,7 @@ const updateMessage = async (fieldsData, fields, messageInternalId) => {
 
     return updatedMessage;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 // const setReadMessages = async () => {
@@ -186,11 +186,11 @@ const deleteMessage = async (messageInternalId) => {
 
     return deletedMessage;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
-export default {
+export {
   getAllMessages,
   getMsg,
   getChatMessages,

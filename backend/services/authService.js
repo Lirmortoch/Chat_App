@@ -1,5 +1,5 @@
 import postgreSql from '../db.js';
-import logger from '../utils/logger.js';
+import { error } from '../utils/logger.js';
 
 const insertSession = async (user_id, sessionData, expireDate) => {
   try {
@@ -11,7 +11,7 @@ const insertSession = async (user_id, sessionData, expireDate) => {
 
     return session;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const deleteSession = async (identifier) => {
@@ -23,11 +23,11 @@ const deleteSession = async (identifier) => {
 
     return deletedSession;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
-export default {
+export {
   insertSession,
   deleteSession,
 };

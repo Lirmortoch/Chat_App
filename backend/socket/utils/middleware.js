@@ -35,6 +35,6 @@ const checkSocketUserAccess = async (socket, next) => {
   }
 };
 
-export default {
+export {
   checkSocketUserAccess,
 };

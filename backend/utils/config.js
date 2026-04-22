@@ -10,7 +10,7 @@ const POSTGRE_DB_USERNAME = process.env.POSTGRE_DB_USERNAME;
 const POSTGRE_DB_PASSWORD = process.env.POSTGRE_DB_PASSWORD;
 const SALT_ROUNDS = process.env.SALT_ROUNDS;
 
-export default {
+export {
   SERVER_PORT,
   POSTGRE_DB_URI,
   POSTGRE_DB_USERNAME,

@@ -1,10 +1,12 @@
 import middlewareService from '../services/middlewareService.js';
 import logger from '../utils/logger.js';
 
-import socketMiddleware from './utils/middleware.js';
+import {
+  checkSocketUserAccess,
+} from './utils/middleware.js';
 
 const initializeSocket = (io) => {
-  io.use(socketMiddleware.checkSocketUserAccess);
+  io.use(checkSocketUserAccess);
 
   io.on('connection', (socket) => {
     logger.info(`User ${socket.user.username} authorized via socket`);

@@ -1,5 +1,5 @@
 import postgreSql from '../db.js';
-import logger from '../utils/logger.js';
+import { error } from '../utils/logger.js';
 
 const getSessionData = async (identifier) => {
   try {
@@ -12,7 +12,7 @@ const getSessionData = async (identifier) => {
 
     return user;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getUserRole = async (user_id) => {
@@ -26,7 +26,7 @@ const getUserRole = async (user_id) => {
 
     return access;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -44,7 +44,7 @@ const getChatUserRole = async (chat_public_id, user_id) => {
 
     return access;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getUserChatAccess = async (user_id, chat_id) => {
@@ -58,7 +58,7 @@ const getUserChatAccess = async (user_id, chat_id) => {
   `;
     return Boolean(membership);
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getMessageOwner = async (message_public_id) => {
@@ -71,7 +71,7 @@ const getMessageOwner = async (message_public_id) => {
 
     return message;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -83,11 +83,11 @@ const getUserChats = async (user_id) => {
 
     return userChats;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
-export default {
+export {
   getSessionData,
   getUserRole,
 

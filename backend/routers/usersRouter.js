@@ -1,7 +1,14 @@
 import express from 'express';
 const UsersRouter = express.Router();
 
-import UsersController from '../controllers/usersController.js';
+import {
+  getUsers,
+  getUser,
+  signupUser,
+  updateUserInfo,
+  updateUserPrivileges,
+  deleteUser,
+} from '../controllers/usersController.js';
 
 import userSchema from '../validation/schemas/user.schema.js';
 import {
@@ -12,29 +19,29 @@ import {
 } from '../utils/middleware.js';
 import { validator } from '../validation/utils/middleware.js';
 
-UsersRouter.get('/', checkUserPrivileges('owner'), UsersController.getUsers);
-UsersRouter.get('/:public_id', UsersController.getUser);
+UsersRouter.get('/', checkUserPrivileges('owner'), getUsers);
+UsersRouter.get('/:public_id', getUser);
 UsersRouter.post(
   '/signup',
   fieldWhiteList(userList),
   validator(userSchema),
-  UsersController.signupUser,
+  signupUser,
 );
 
 UsersRouter.put(
   '/:public_id',
   fieldWhiteList(userList),
   validator(userSchema),
-  UsersController.updateUserInfo,
+  updateUserInfo,
 );
 UsersRouter.put(
   '/access/user/:public_id',
   checkUserPrivileges('med-admin', 'high-admin'),
   fieldWhiteList(adminList),
   validator(userSchema),
-  UsersController.updateUserPrivileges,
+  updateUserPrivileges,
 );
 
-UsersRouter.delete('/:public_id', UsersController.deleteUser);
+UsersRouter.delete('/:public_id', deleteUser);
 
 export default UsersRouter;

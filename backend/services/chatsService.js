@@ -1,6 +1,6 @@
 import postgreSql from '../db.js';
 import { fieldObjectChecking } from '../utils/middleware.js';
-import logger from '../utils/logger.js';
+import { error } from '../utils/logger.js';
 
 const getAllChats = async () => {
   try {
@@ -11,7 +11,7 @@ const getAllChats = async () => {
 
     return chats;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getChat = async (public_id) => {
@@ -51,7 +51,7 @@ const getChat = async (public_id) => {
 
     return chat;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 const getChatsByUser = async (user_id) => {
@@ -125,7 +125,7 @@ const getChatsByUser = async (user_id) => {
 
     return chats;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -200,7 +200,7 @@ const insertChat = async (recipient_public_id, type, name, avatar, creator_id, c
 
     return insertedChat;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -242,7 +242,7 @@ const updateChat = async (fieldsData, chat_id, fields) => {
 
     return updatedChat;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -257,7 +257,7 @@ const updateChatMembers = async (fieldsData, cols) => {
 
     return newAccess;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
@@ -271,11 +271,11 @@ const deleteChat = async (chat_id) => {
 
     return deletedChat;
   } catch (err) {
-    logger.error(`Error: ${err}`);
+    error(`Error: ${err}`);
   }
 };
 
-export default {
+export {
   getAllChats,
   getChat,
   getChatsByUser,

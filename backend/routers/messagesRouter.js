@@ -1,7 +1,14 @@
 import express from 'express';
 const MessagesRouter = express.Router();
 
-import messageController from '../controllers/messagesController.js';
+import {
+  getAllMessages,
+  getMessage,
+  getChatMsgs,
+  addNewMessage,
+  updateMsg,
+  deleteMsg,
+} from '../controllers/messagesController.js';
 import messageSchema from '../validation/schemas/message.schema.js';
 import {
   checkChatAccess,
@@ -12,16 +19,16 @@ import {
 } from '../utils/middleware.js';
 import { validator } from '../validation/utils/middleware.js';
 
-MessagesRouter.get('/', checkUserPrivileges('owner'), messageController.getAllMessages);
-MessagesRouter.get('/message/:message_public_id', messageController.getMessage);
-MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, messageController.getChatMsgs);
+MessagesRouter.get('/', checkUserPrivileges('owner'), getAllMessages);
+MessagesRouter.get('/message/:message_public_id', getMessage);
+MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, getChatMsgs);
 
 MessagesRouter.post(
   '/',
   checkChatAccess,
   fieldWhiteList(userList),
   validator(messageSchema),
-  messageController.addNewMessage,
+  addNewMessage,
 );
 
 MessagesRouter.put(
@@ -30,14 +37,14 @@ MessagesRouter.put(
   checkMessageAccess,
   fieldWhiteList(userList),
   validator(messageSchema),
-  messageController.updateMsg,
+  updateMsg,
 );
 
 MessagesRouter.delete(
   '/message/:public_id',
   checkChatAccess,
   checkMessageAccess,
-  messageController.deleteMsg,
+  deleteMsg,
 );
 
 export default MessagesRouter;

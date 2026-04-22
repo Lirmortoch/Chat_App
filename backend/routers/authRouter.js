@@ -1,7 +1,7 @@
 import express from 'express';
 const AuthRouter = express.Router();
 
-import AuthController from '../controllers/authController.js';
+import { addSession, deleteSession } from '../controllers/authController.js';
 import { fieldWhiteList, userList, sessionList } from '../utils/middleware.js';
 
 import { validator } from '../validation/utils/middleware.js';
@@ -14,8 +14,8 @@ AuthRouter.post(
   fieldWhiteList(sessionList),
   validator(userSchema),
   validator(sessionSchema),
-  AuthController.addSession,
+  addSession,
 );
-AuthRouter.delete('/user/logout', AuthController.deleteSession);
+AuthRouter.delete('/user/logout', deleteSession);
 
 export default AuthRouter;
