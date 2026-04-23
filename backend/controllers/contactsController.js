@@ -1,9 +1,17 @@
-import contactsService from '../services/contactsService.js';
+import {
+  getAllContacts as _getAllContacts,
+  getContact as _getContact,
+  getUsersContacts as _getUsersContacts,
+  insertContact,
+  updateContactInfo as _updateContactInfo,
+  updateContactAvatar as _updateContactAvatar,
+  deleteContact as _deleteContact,
+} from '../services/contactsService.js';
 import { error } from '../utils/logger.js';
 
 const getAllContacts = async (request, response) => {
   try {
-    const contacts = await contactsService.getAllContacts();
+    const contacts = await _getAllContacts();
 
     response.json(contacts);
   } catch (err) {
@@ -13,7 +21,7 @@ const getAllContacts = async (request, response) => {
 };
 const getContact = async (request, response) => {
   try {
-    const contact = await contactsService.getContact(request.params.public_id);
+    const contact = await _getContact(request.params.public_id);
 
     if (!contact) {
       return response.status(404).json({ message: 'Contact not found' });
@@ -29,7 +37,7 @@ const getUserContacts = async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const contacts = await contactsService.getUsersContacts(user_id);
+    const contacts = await _getUsersContacts(user_id);
 
     if (!contacts) {
       return response.status(404).json({ message: 'Contacts not found' });
@@ -51,7 +59,7 @@ const addNewContact = async (request, response) => {
       return response.status(400).json({ message: 'Missing required field' });
     }
 
-    const insertedContact = await contactsService.insertContact(request.body.fieldsData, ownerId);
+    const insertedContact = await insertContact(request.body.fieldsData, ownerId);
 
     response.status(201).json(insertedContact);
   } catch (err) {
@@ -66,7 +74,7 @@ const updateContactInfo = async (request, response) => {
     const fields = request.fields;
 
     const cols = fields.filter((f) => f !== 'avatar').join(', ');
-    const updatedContact = await contactsService.updateContactInfo(fieldsData, cols, request.params.public_id);
+    const updatedContact = await _updateContactInfo(fieldsData, cols, request.params.public_id);
 
     response.status(201).json(updatedContact);
   } catch (err) {
@@ -78,7 +86,7 @@ const updateContactAvatar = async (request, response) => {
   try {
     const { avatar, contact_public_id } = request.body;
 
-    const updatedAvatar = await contactsService.updateContactAvatar(avatar, contact_public_id);
+    const updatedAvatar = await _updateContactAvatar(avatar, contact_public_id);
 
     response.status(201).json(updatedAvatar);
   } catch (err) {
@@ -89,7 +97,7 @@ const updateContactAvatar = async (request, response) => {
 
 const deleteContact = async (request, response) => {
   try {
-    const deletedContact = await contactsService.deleteContact(request.params.public_id);
+    const deletedContact = await _deleteContact(request.params.public_id);
 
     response.status(201).json(deletedContact);
   } catch (err) {

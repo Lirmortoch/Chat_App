@@ -1,5 +1,5 @@
 import middlewareService from '../services/middlewareService.js';
-import logger from '../utils/logger.js';
+import { info, error } from '../utils/logger.js';
 
 import {
   checkSocketUserAccess,
@@ -9,7 +9,7 @@ const initializeSocket = (io) => {
   io.use(checkSocketUserAccess);
 
   io.on('connection', (socket) => {
-    logger.info(`User ${socket.user.username} authorized via socket`);
+    info(`User ${socket.user.username} authorized via socket`);
 
     socket.on('setup_user', async () => {
       try {
@@ -21,14 +21,14 @@ const initializeSocket = (io) => {
           socket.join(chat.chat_id);
         });
 
-        logger.info(`User - ${socket.user.public_id} initialized and joined ${userChats.length} chats`);
+        info(`User - ${socket.user.public_id} initialized and joined ${userChats.length} chats`);
 
         socket.broadcast.emit('user_status_changed', {
           user_id: socket.user.public_id,
           status: 'online',
         });
       } catch (err) {
-        logger.error(`Error: ${err}`);
+        error(`Error: ${err}`);
       }
     });
 
@@ -41,15 +41,15 @@ const initializeSocket = (io) => {
         }
 
         socket.join(chat_id);
-        logger.info(`User ${socket.user.username} joined chat ${chat_id}`);
+        info(`User ${socket.user.username} joined chat ${chat_id}`);
       } catch (err) {
-        logger.error(`Error: ${err}`);
+        error(`Error: ${err}`);
       }
     });
 
     socket.on('leave_chat', (chat_id) => {
       socket.leave(chat_id);
-      logger.info(`User ${socket.user.name} leave chat ${chat_id}`);
+      info(`User ${socket.user.name} leave chat ${chat_id}`);
     });
 
     socket.on('chat_typing', (chat_id) => {
@@ -76,8 +76,10 @@ const initializeSocket = (io) => {
       });
     });
 
+    socket.on('update_data', (data) => {});
+
     socket.on('disconnect', () => {
-      logger.info(`User ${socket.user.username} disconnect`);
+      info(`User ${socket.user.username} disconnect`);
 
       socket.broadcast.emit('user_status_changed', {
         user_id: socket.user.public_id,
@@ -87,7 +89,7 @@ const initializeSocket = (io) => {
     });
 
     socket.on('error', (err) => {
-      logger.error(`Error: ${err}`);
+      error(`Error: ${err}`);
     });
   });
 };
