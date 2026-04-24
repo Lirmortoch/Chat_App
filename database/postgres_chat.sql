@@ -68,11 +68,11 @@ CREATE TABLE chat.chats (
 	"type" varchar(25) NOT NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
 	description varchar(255) DEFAULT ''::character varying NOT NULL,
-	photo_id uuid NULL,
+	photo_id int4 NULL,
 	CONSTRAINT chats_pk PRIMARY KEY (id),
 	CONSTRAINT chats_unique_1 UNIQUE (public_id),
 	CONSTRAINT chats_url UNIQUE (url),
-	CONSTRAINT chats_photos_fk FOREIGN KEY (public_id) REFERENCES chat.photos(public_id) ON DELETE CASCADE
+	CONSTRAINT chats_photos_fk FOREIGN KEY (photo_id) REFERENCES chat.photos(id) ON DELETE CASCADE
 );
 
 

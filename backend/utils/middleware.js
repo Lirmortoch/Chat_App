@@ -1,5 +1,5 @@
 import { getSessionData, getUserRole, getChatUserRole, getMessageOwner } from '../services/middlewareService.js';
-import { error } from './logger.js';
+import { info, error } from './logger.js';
 
 const checkUserAccess = async (request, response, next) => {
   try {
@@ -13,7 +13,7 @@ const checkUserAccess = async (request, response, next) => {
 
     if (!user) {
       return response.status(401).json({ message: 'Session invalid' });
-    } else if (new Date(user.expired_at) > new Date()) {
+    } else if (new Date(user.expired_at) < new Date()) {
       return response.status(401).json({ message: 'Session expired' });
     } else if (user.restricted || user.deleted) {
       return response.status(403).json({ message: 'Account suspended' });

@@ -8,6 +8,7 @@ import {
   updateChat as _updateChat,
   updateChatMembers,
   deleteChat as _deleteChat,
+  subscribeChat,
 } from '../services/chatsService.js';
 
 const getAllChats = async (request, response) => {
@@ -65,6 +66,16 @@ const createNewChat = async (request, response) => {
   }
 };
 
+const subscribeOnChat = async (request, response) => {
+  try {
+    const newAccess = await subscribeChat(request.user.id, request.chatInternalId);
+
+    response.status(201).json(newAccess);
+  } catch (err) {
+    error(err);
+    response.status(500).json({ message: 'Internal server error' });
+  }
+};
 const updateChat = async (request, response) => {
   try {
     const { fieldsData } = request.body;
@@ -84,7 +95,7 @@ const updateChatAccess = async (request, response) => {
     const { fieldsData } = request.body;
     const cols = request.cols;
 
-    const newAccess = await updateChatMembers(fieldsData, cols);
+    const newAccess = await updateChatMembers(fieldsData, cols, request.user.id, request.chatInternalId);
 
     response.status(201).json(newAccess);
   } catch (err) {
@@ -112,6 +123,7 @@ export {
 
   createNewChat,
 
+  subscribeOnChat,
   updateChat,
   updateChatAccess,
 

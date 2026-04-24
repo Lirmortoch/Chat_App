@@ -5,6 +5,7 @@ import supertest from 'supertest';
 import bcrypt from 'bcrypt';
 
 import app from '../app.js';
+import { info } from '../utils/logger.js';
 import seed from './utils/seed.js';
 
 const api = supertest(app);

@@ -35,7 +35,7 @@ const getChat = async (public_id) => {
             )
         ) AS members
     FROM chat.chats c
-    LEFT JOIN chat.photos cp ON c.photo_id = cp.public_id
+    LEFT JOIN chat.photos cp ON c.photo_id = cp.photo_id
     JOIN chat.chats_members cm ON c.id = cm.chat_id
     JOIN chat.users u ON cm.user_id = u.id
     LEFT JOIN LATERAL (
@@ -78,7 +78,7 @@ const getChatsByUser = async (user_id) => {
               JOIN chat.photos ph ON upp.photo_id = ph.public_id 
               WHERE upp.user_id = u_other.id AND upp.is_main = true)
           END,
-          (SELECT file_url FROM chat.photos WHERE public_id = c.photo_id) 
+          (SELECT file_url FROM chat.photos WHERE id = c.photo_id) 
       ) AS avatar_url,
 
       m.message AS last_message,
@@ -156,9 +156,9 @@ const insertChat = async (recipient_public_id, type, name, avatar, creator_id, c
         const [photo] = await sql`
           INSERT INTO chat.photos (file_url, file_type, file_name, width, height)
           VALUES (${avatar.file_url}, ${avatar.file_type}, ${avatar.file_name}, ${avatar.width}, ${avatar.height})
-          RETURNING public_id
+          RETURNING id
         `;
-        createdPhotoId = photo.public_id;
+        createdPhotoId = photo.id;
       }
 
       const [newChat] = await sql`
@@ -226,7 +226,7 @@ const updateChat = async (fieldsData, chat_id, fields) => {
 
         [updatedChatAvatar] = await sql`
           UPDATE chats
-          SET photo_id = ${photo.public_id}
+          SET photo_id = (SELECT id FROM chat.photos WHERE public_id = ${photo.public_id})
           WHERE id = ${chat_id}
           RETURNING photo_id
         `;
@@ -246,13 +246,27 @@ const updateChat = async (fieldsData, chat_id, fields) => {
   }
 };
 
-const updateChatMembers = async (fieldsData, cols) => {
+const updateChatMembers = async (fieldsData, cols, user_id, chat_id) => {
   try {
     const [newAccess] = await postgreSql`
       UPDATE chat.chats_members
       SET ${postgreSql(fieldsData, cols)}
-      WHERE chat_id = ${fieldsData.chat_id} AND user_id = ${fieldsData.user_id}
+      WHERE chat_id = ${chat_id} AND user_id = ${user_id}
       RETURNING ${cols}
+    `;
+
+    return newAccess;
+  } catch (err) {
+    error(`Error: ${err}`);
+  }
+};
+
+const subscribeChat = async (user_id, chat_id) => {
+  try {
+    const [newAccess] = await postgreSql`
+      INSERT INTO chat.chats_members (user_id, chat_id)
+      VALUES (${user_id}, ${chat_id})
+      RETURNING user_id, chat_id
     `;
 
     return newAccess;
@@ -282,6 +296,7 @@ export {
 
   insertChat,
 
+  subscribeChat,
   updateChat,
   updateChatMembers,
 

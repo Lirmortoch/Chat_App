@@ -1,31 +1,38 @@
 import bcrypt from 'bcrypt';
 
-import usersService from '../services/usersService.js';
-import config from '../utils/config.js';
-import logger from '../utils/logger.js';
+import {
+  getAllUsers,
+  getUser as _getUser,
+  insertUser,
+  updateUserInfo as _updateUserInfo,
+  updateUserAccess,
+  deleteUser as _deleteUser,
+} from '../services/usersService.js';
+import { SALT_ROUNDS } from '../utils/config.js';
+import { error } from '../utils/logger.js';
 
 const getUsers = async (request, response) => {
   try {
-    const users = await usersService.getAllUsers();
+    const users = await getAllUsers();
 
     response.json(users);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: 'Internal server error' });
   }
 };
 const getUser = async (request, response) => {
   try {
-    const user = await usersService.getUser(request.params.public_id);
+    const user = await _getUser(request.params.public_id);
 
     if (!user) {
       return response.status(404).json({ message: 'User not found' });
     }
 
     response.json(user);
-  } catch (error) {
-    logger.error(error);
-    response.status(500).json({ message: `Internal server error` });
+  } catch (err) {
+    error(err);
+    response.status(500).json({ message: `Internal szerver error` });
   }
 };
 
@@ -37,14 +44,14 @@ const signupUser = async (request, response) => {
       return response.status(400).json({ message: 'Missing required field' });
     }
 
-    const saltRounds = config.SALT_ROUNDS;
+    const saltRounds = SALT_ROUNDS;
     const password_hash = await bcrypt.hash(password, saltRounds);
 
-    const insertedUser = await usersService.insertUser(request.body.fieldsData, password_hash);
+    const insertedUser = await insertUser(request.body.fieldsData, password_hash);
 
     response.status(201).json(insertedUser);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: `Internal server error` });
   }
 };
@@ -55,11 +62,11 @@ const updateUserInfo = async (request, response) => {
     const user_id = request.user.id;
     const fields = request.fields;
 
-    const updatedUser = await usersService.updateUserInfo(fieldsData, fields, user_id);
+    const updatedUser = await _updateUserInfo(fieldsData, fields, user_id);
 
     response.status(201).json(updatedUser);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: `Internal server error` });
   }
 };
@@ -68,11 +75,11 @@ const updateUserPrivileges = async (request, response) => {
     const { fieldsData } = request.body;
     const cols = request.cols;
 
-    const newAccess = await usersService.updateUserAccess(fieldsData, cols);
+    const newAccess = await updateUserAccess(fieldsData, cols);
 
     response.status(201).json(newAccess);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: `Internal server error` });
   }
 };
@@ -81,11 +88,11 @@ const deleteUser = async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const deletedUser = await usersService.deleteUser(user_id);
+    const deletedUser = await _deleteUser(user_id);
 
     response.status(201).json(deletedUser);
-  } catch (error) {
-    logger.error(error);
+  } catch (err) {
+    error(err);
     response.status(500).json({ message: `Internal server error` });
   }
 };

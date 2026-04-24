@@ -25,7 +25,7 @@ const addSession = async (request, response) => {
     }
 
     const expireDate = new Date();
-    expireDate.setHours(expireDate.getHours() + 48);
+    expireDate.setDate(expireDate.getDate() + 2);
 
     const session = await insertSession(user.id, sessionData, expireDate);
 

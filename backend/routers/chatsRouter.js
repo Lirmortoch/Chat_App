@@ -5,6 +5,7 @@ import {
   getAllChats,
   getUserChats,
   createNewChat,
+  subscribeOnChat,
   updateChat,
   updateChatAccess,
   deleteChat,
@@ -65,7 +66,7 @@ ChatsRouter.put(
   checkChatAccess(),
   fieldWhiteList(membershipChatList),
   validator(chatSchema),
-  updateChatAccess,
+  subscribeOnChat,
 );
 
 ChatsRouter.delete('/:public_id', checkChatAccess('owner'), deleteChat);
