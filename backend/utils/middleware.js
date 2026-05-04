@@ -74,6 +74,7 @@ const checkChatAccess = (...allowedChatRoles) => {
       }
 
       request.chatInternalId = access.chat_id;
+      request.chat_public_id = access.public_id;
 
       next();
     } catch (err) {

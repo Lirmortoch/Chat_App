@@ -33,7 +33,7 @@ const getUserRole = async (user_id) => {
 const getChatUserRole = async (chat_public_id, user_id) => {
   try {
     const [access] = await postgreSql`
-    SELECT cm.chat_id, cm.role
+    SELECT cm.chat_id, cm.role, c.public_id
     FROM chat.chats_members cm
     JOIN chat.chats c ON cm.chat_id = c.id
     WHERE c.public_id = ${chat_public_id} 

@@ -59,7 +59,7 @@ const addNewMessage = async (request, response) => {
     const insertedMessage = await insertMsg(message, additionals, chat_id, sender_id);
 
     const ws = request.app.get('ws');
-    ws.to({chat_id, newMessage: insertedMessage}).emit('new_message');
+    ws.to(chat_id).emit('message_received', insertedMessage);
 
     response.status(201).json(insertedMessage);
   } catch (err) {
@@ -73,8 +73,17 @@ const updateMsg = async (request, response) => {
     const { fieldsData } = request.body;
     const fields = request.fields;
     const messageInternalId = request.messageInternalId;
+    const chat_id = request.chatInternalId;
 
     const updatedMessage = await _updateMessage(fieldsData, fields, messageInternalId);
+
+    const ws = request.app.get('ws');
+    ws.to(chat_id).emit('message_edited', { 
+      message_id: messageInternalId, 
+      new_text: updatedMessage.message, 
+      edited_at: updateMsg.edited_at,
+      additionals: updatedMessage.updatedAdditionals === undefined ? null : updatedMessage.updatedAdditionals,
+    });
 
     response.status(201).json(updatedMessage);
   } catch (err) {
@@ -86,8 +95,12 @@ const updateMsg = async (request, response) => {
 const deleteMsg = async (request, response) => {
   try {
     const messageInternalId = request.messageInternalId;
+    const chat_id = request.chatInternalId;
 
     const [deletedMessage] = await deleteMessage(messageInternalId);
+
+    const ws = request.app.get('ws');
+    ws.to(chat_id).emit('message_deleted', { message_id: messageInternalId });
 
     response.status(201).json(deletedMessage);
   } catch (err) {

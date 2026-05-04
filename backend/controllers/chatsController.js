@@ -9,6 +9,7 @@ import {
   updateChatMembers,
   deleteChat as _deleteChat,
   subscribeChat,
+  addNewUserToChat as _addNewUserToChat,
 } from '../services/chatsService.js';
 
 const getAllChats = async (request, response) => {
@@ -25,7 +26,7 @@ const getUserChats = async (request, response) => {
   try {
     const user_id = request.user.id;
 
-    const chats = getChatsByUser(user_id);
+    const chats = await getChatsByUser(user_id);
 
     response.json(chats);
   } catch (err) {
@@ -55,8 +56,8 @@ const createNewChat = async (request, response) => {
     );
 
     const ws = request.app.get('ws');
-    ws.to(recipient_public_id).emit('join_chat');
-    ws.to(creator_id).emit('join_chat');
+    ws.to(recipient_public_id).emit('added_to_chat', insertedChat);
+    ws.to(request.user.public_id).emit('added_to_chat', insertedChat);
 
     response.status(201).json(insertedChat);
   } catch (err) {
@@ -68,7 +69,12 @@ const createNewChat = async (request, response) => {
 
 const subscribeOnChat = async (request, response) => {
   try {
-    const newAccess = await subscribeChat(request.user.id, request.chatInternalId);
+    const chat_id = request.chatInternalId;
+    const user_id = request.user.id;
+
+    const newAccess = await subscribeChat(user_id, chat_id);
+
+    // const ws = request.app.get('ws');
 
     response.status(201).json(newAccess);
   } catch (err) {
@@ -76,6 +82,24 @@ const subscribeOnChat = async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 };
+const addNewUserToChat = async (request, response) => {
+  try {
+    const chat_id = request.chatInternalId;
+    const user_public_id = request.params.user_public_id;
+    const chat_public_id = request.chat_public_id;
+
+    const newAccess = await _addNewUserToChat(user_public_id, chat_id, chat_public_id);
+
+    const ws = request.app.get('ws');
+    ws.to(user_public_id).emit('added_to_chat', newAccess.chatData); 
+    ws.to(chat_id).emit('member_joined', { user: newAccess.newMemberData });
+
+    response.status(201).json(newAccess);
+  } catch (err) {
+    error(err);
+    response.status(500).json({ message: 'Internal server error' });
+  }
+}
 const updateChat = async (request, response) => {
   try {
     const { fieldsData } = request.body;
@@ -124,6 +148,7 @@ export {
   createNewChat,
 
   subscribeOnChat,
+  addNewUserToChat,
   updateChat,
   updateChatAccess,
 

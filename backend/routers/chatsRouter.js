@@ -9,6 +9,7 @@ import {
   updateChat,
   updateChatAccess,
   deleteChat,
+  addNewUserToChat,
 } from '../controllers/chatsController.js';
 
 import chatSchema from '../validation/schemas/chat.schema.js';
@@ -67,6 +68,13 @@ ChatsRouter.put(
   fieldWhiteList(membershipChatList),
   validator(chatSchema),
   subscribeOnChat,
+);
+ChatsRouter.put(
+  '/membership/chat/private/:public_id',
+  checkChatAccess('owner', 'high-admin', 'med-admin'),
+  fieldWhiteList(membershipChatList),
+  validator(chatSchema),
+  addNewUserToChat,
 );
 
 ChatsRouter.delete('/:public_id', checkChatAccess('owner'), deleteChat);

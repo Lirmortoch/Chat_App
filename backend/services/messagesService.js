@@ -136,21 +136,11 @@ const updateMessage = async (fieldsData, fields, messageInternalId) => {
         messageToReturn = updatedMessageData;
       }
       if (fields.includes('additionals') && fieldsData.additionals) {
-        let updatedAdditionals = null;
-
-        if (fieldsData.additionals.delete) {
-          updatedAdditionals = await sql`
-          DELETE FROM chat.additionals
-          WHERE message_id = ${messageInternalId}
-          RETURNING file_type, file_url, file_name, public_id, created_at
-        `;
-        } else {
-          updatedAdditionals = await sql`
+        const updatedAdditionals = await sql`
           INSERT INTO chat.additionals (file_type, file_url, file_name, message_id)
           ${sql(fieldsData.additionals.map((a) => ({ ...a, message_id: messageInternalId })))}
           RETURNING file_type, file_url, public_id
         `;
-        }
 
         messageToReturn = { updatedAdditionals, updatedMessageData };
       }
