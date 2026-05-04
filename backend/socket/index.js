@@ -59,7 +59,6 @@ const initializeSocket = (io) => {
         user_id: socket.user.public_id,
       });
     });
-
     socket.on('chat_stop-typing', (chat_id) => {
       socket.in(chat_id).emit('stop-typing');
     });

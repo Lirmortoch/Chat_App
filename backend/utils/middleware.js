@@ -1,5 +1,5 @@
 import { getSessionData, getUserRole, getChatUserRole, getMessageOwner } from '../services/middlewareService.js';
-import { info, error } from './logger.js';
+import { error } from './logger.js';
 
 const checkUserAccess = async (request, response, next) => {
   try {

@@ -38,7 +38,7 @@ async function seed() {
       { user_id: users[0].id, photo_id: photos[0].public_id, is_main: true },
       { user_id: users[1].id, photo_id: photos[1].public_id, is_main: true },
     ];
-    await postgreSql`
+    const userPhotos = await postgreSql`
       INSERT INTO chat.user_profile_photos ${postgreSql(userProfilePhotosData, 'user_id', 'photo_id', 'is_main')}
     `;
 
@@ -73,7 +73,7 @@ async function seed() {
       { chat_id: chats[0].id, sender_id: users[1].id, message: 'Привет, Иван! Как дела?' },
       { chat_id: chats[1].id, sender_id: users[0].id, message: 'Коллеги, начинаем работу над проектом.' }
     ];
-    await postgreSql`
+    const messages = await postgreSql`
       INSERT INTO chat.messages ${postgreSql(messagesData, 'chat_id', 'sender_id', 'message')}
       RETURNING id
     `;
@@ -94,7 +94,14 @@ async function seed() {
 
     info('✅ Seeding process was successfully end!');
 
-    return session;
+    return {
+      users,
+      photos,
+      chats,
+      messages,
+      userPhotos,
+      session
+    };
   } catch (err) {
     error('❌ Seeding error:', err);
   }
