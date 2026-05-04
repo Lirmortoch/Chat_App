@@ -5,11 +5,11 @@ import {
   getAllChats,
   getUserChats,
   createNewChat,
-  subscribeOnChat,
   updateChat,
   updateChatAccess,
   deleteChat,
   addNewUserToChat,
+  deleteUserFromChat,
 } from '../controllers/chatsController.js';
 
 import chatSchema from '../validation/schemas/chat.schema.js';
@@ -20,6 +20,7 @@ import {
   adminList,
   checkUserPrivileges,
   membershipChatList,
+  checkChatRestrictions,
 } from '../utils/middleware.js';
 import { validator } from '../validation/utils/middleware.js';
 
@@ -62,19 +63,35 @@ ChatsRouter.put(
   validator(chatSchema),
   updateChatAccess,
 );
-ChatsRouter.put(
+
+ChatsRouter.post(
   '/membership/chat/:public_id',
-  checkChatAccess(),
+  checkChatRestrictions,
   fieldWhiteList(membershipChatList),
   validator(chatSchema),
-  subscribeOnChat,
+  addNewUserToChat,
 );
-ChatsRouter.put(
+ChatsRouter.delete(
+  '/membership/chat/:public_id',
+  checkChatRestrictions,
+  fieldWhiteList(membershipChatList),
+  validator(chatSchema),
+  deleteUserFromChat,
+);
+
+ChatsRouter.post(
   '/membership/chat/private/:public_id',
   checkChatAccess('owner', 'high-admin', 'med-admin'),
   fieldWhiteList(membershipChatList),
   validator(chatSchema),
   addNewUserToChat,
+);
+ChatsRouter.delete(
+  '/membership/chat/private/:public_id',
+  checkChatAccess('owner', 'high-admin', 'med-admin'),
+  fieldWhiteList(membershipChatList),
+  validator(chatSchema),
+  deleteUserFromChat,
 );
 
 ChatsRouter.delete('/:public_id', checkChatAccess('owner'), deleteChat);

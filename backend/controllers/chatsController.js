@@ -8,8 +8,8 @@ import {
   updateChat as _updateChat,
   updateChatMembers,
   deleteChat as _deleteChat,
-  subscribeChat,
   addNewUserToChat as _addNewUserToChat,
+  deleteUserFromChat as _deleteUserFromChat,
 } from '../services/chatsService.js';
 
 const getAllChats = async (request, response) => {
@@ -67,21 +67,6 @@ const createNewChat = async (request, response) => {
   }
 };
 
-const subscribeOnChat = async (request, response) => {
-  try {
-    const chat_id = request.chatInternalId;
-    const user_id = request.user.id;
-
-    const newAccess = await subscribeChat(user_id, chat_id);
-
-    // const ws = request.app.get('ws');
-
-    response.status(201).json(newAccess);
-  } catch (err) {
-    error(err);
-    response.status(500).json({ message: 'Internal server error' });
-  }
-};
 const addNewUserToChat = async (request, response) => {
   try {
     const chat_id = request.chatInternalId;
@@ -100,6 +85,25 @@ const addNewUserToChat = async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 }
+const deleteUserFromChat = async (request, response) => {
+  try {
+    const chat_id = request.chatInternalId;
+    const user_public_id = request.params.user_public_id;
+    const chat_public_id = request.chat_public_id;
+
+    const newAccess = await _deleteUserFromChat(user_public_id, chat_id, chat_public_id);
+
+    const ws = request.app.get('ws');
+    ws.to(user_public_id).emit('added_to_chat', newAccess.chatData); 
+    ws.to(chat_id).emit('member_joined', { user: newAccess.newMemberData });
+
+    response.status(201).json(newAccess);
+  } catch (err) {
+    error(err);
+    response.status(500).json({ message: 'Internal server error' });
+  }
+}
+
 const updateChat = async (request, response) => {
   try {
     const { fieldsData } = request.body;
@@ -147,8 +151,9 @@ export {
 
   createNewChat,
 
-  subscribeOnChat,
   addNewUserToChat,
+  deleteUserFromChat,
+
   updateChat,
   updateChatAccess,
 

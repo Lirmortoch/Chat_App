@@ -1,4 +1,4 @@
-import { getSessionData, getUserRole, getChatUserRole, getMessageOwner } from '../services/middlewareService.js';
+import { getSessionData, getUserRole, getChatUserRole, getMessageOwner, isUserRestrict } from '../services/middlewareService.js';
 import { error } from './logger.js';
 
 const checkUserAccess = async (request, response, next) => {
@@ -53,6 +53,25 @@ const checkUserPrivileges = (...allowedRoles) => {
   };
 };
 
+const checkChatRestrictions = async (request, response, next) => {
+  try {
+    const chat_public_id = request.params.chat_public_id || request.params.public_id;
+    const user_id = request.user.public_id;
+
+    const access = await getChatUserRole(chat_public_id, user_id);
+
+    if (!access) {
+      return response.status(403).json({
+        message: 'Access denied: You are not a member of this chat',
+      });
+    }
+
+    next();
+  } catch (err) {
+    error('Middleware Error:', err);
+    response.status(500).json({ message: 'Internal server error during access check' });
+  }
+}
 const checkChatAccess = (...allowedChatRoles) => {
   return async (request, response, next) => {
     try {
@@ -166,4 +185,5 @@ export {
   fieldObjectChecking,
   sessionList,
   membershipChatList,
+  checkChatRestrictions,
 };

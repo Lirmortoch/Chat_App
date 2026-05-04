@@ -261,26 +261,44 @@ const updateChatMembers = async (fieldsData, cols, user_id, chat_id) => {
   }
 };
 
-const subscribeChat = async (user_id, chat_id) => {
-  try {
-    const [newAccess] = await postgreSql`
-      INSERT INTO chat.chats_members (user_id, chat_id)
-      VALUES (${user_id}, ${chat_id})
-      RETURNING user_id, chat_id
-    `;
-
-    return newAccess;
-  } catch (err) {
-    error(`Error: ${err}`);
-  }
-};
 const addNewUserToChat = async (user_public_id, chat_id, chat_public_id) => {
   try {
     const newAccess = await postgreSql.begin(async (sql) => {
       const [newAccessData] = await sql`
         INSERT INTO chat.chats_members (user_id, chat_id)
         VALUES (SELECT id FROM chat.users WHERE public_id = ${user_public_id}, ${chat_id})
-        RETURNING user_id, chat_id
+      `;
+
+      const [newMemberData] = await sql`
+        SELECT
+          name, 
+          username, 
+          email, 
+          phone_number,
+          public_id 
+        FROM chat.users 
+        WHERE public_id = ${user_public_id}
+      `;
+      const [chatData] = await getChat(chat_public_id);
+
+      return {
+        newAccessData,
+        newMemberData,
+        chatData
+      };
+    });
+  
+    return newAccess;
+  } catch (err) {
+    error(`Error: ${err}`);
+  }
+}
+const deleteUserFromChat = async (user_public_id, chat_id, chat_public_id) => {
+  try {
+    const newAccess = await postgreSql.begin(async (sql) => {
+      const [newAccessData] = await sql`
+        DELETE FROM chat.chats_members
+        WHERE user_id = (SELECT id FROM chat.users WHERE public_id = ${user_public_id}) AND chat_id = ${chat_id}
       `;
 
       const [newMemberData] = await sql`
@@ -329,8 +347,9 @@ export {
 
   insertChat,
 
-  subscribeChat,
   addNewUserToChat,
+  deleteUserFromChat,
+
   updateChat,
   updateChatMembers,
 

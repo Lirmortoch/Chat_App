@@ -30,6 +30,22 @@ const getUserRole = async (user_id) => {
   }
 };
 
+const isUserRestrict = async (chat_public_id, user_public_id) => {
+  try {
+    const [access] = await postgreSql`
+    SELECT 1 FROM chat.chats_members cm
+    JOIN chat.chats c on cm.chat_id = c.id
+    WHERE c.public_id = ${chat_public_id}
+      AND cm.user_id = (SELECT id FROM chat.users WHERE public_id = ${user_public_id})
+      AND (cm.deleted IS FALSE OR cm.deleted IS NULL)
+      AND (cm.restricted IS FALSE OR cm.restricted IS NULL)
+  `;
+
+    return access;
+  } catch (err) {
+    error(`Error: ${err}`);
+  }
+};
 const getChatUserRole = async (chat_public_id, user_id) => {
   try {
     const [access] = await postgreSql`
@@ -47,6 +63,7 @@ const getChatUserRole = async (chat_public_id, user_id) => {
     error(`Error: ${err}`);
   }
 };
+
 const getUserChatAccess = async (user_id, chat_id) => {
   try {
     const [membership] = await postgreSql`
@@ -91,7 +108,9 @@ export {
   getSessionData,
   getUserRole,
 
+  isUserRestrict,
   getChatUserRole,
+
   getUserChatAccess,
   getMessageOwner,
 
