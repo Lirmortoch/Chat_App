@@ -1,4 +1,4 @@
-import { getSessionData, getUserRole, getChatUserRole, getMessageOwner, isUserRestrict, isSameUser as _isSameUser } from '../services/middlewareService.js';
+import { getSessionData, getUserRole, getChatUserRole, getMessageOwner, isUserRestrict } from '../services/middlewareService.js';
 import { error } from './logger.js';
 
 const checkUserAccess = async (request, response, next) => {
@@ -32,14 +32,8 @@ const checkUserPrivileges = (...allowedRoles) => {
       const user_id = request.user.id;
 
       const access = await getUserRole(user_id);
-
-      if (!access) {
-        return response.status(403).json({
-          message: 'Access denied: You do not have any privileges',
-        });
-      }
-
-      if (!allowedRoles.includes(access.role) && allowedRoles.length !== 0) {
+      
+      if (!allowedRoles.includes(access.role) && allowedRoles.length === 0 || access.role === undefined) {
         return response.status(403).json({
           message: 'Access denied: You do not have enough privileges',
         });
@@ -124,24 +118,6 @@ const checkMessageAccess = async (request, response, next) => {
   }
 };
 
-const isSameUser = async (request, response, next) => {
-  try {
-    const { user_public_id } = request.params;
-    const user_id = request.user.id;
-
-    const user = await _isSameUser(user_public_id, user_id);
-
-    if (user !== 1) {
-      return response.status(401).json({ message: `You can't delete another user!` });
-    }
-    
-    next();
-  } catch (err) {
-    error('Middleware Error:', err);
-    response.status(500).json({ message: 'Internal server error during access check' });
-  }
-}
-
 // const errorHandler = async (request, response, next) => {};
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
@@ -158,7 +134,6 @@ const userList = [
   'description',
   'username',
   'password',
-  'repeated_password',
   'avatar_is_main',
   'sessionData',
 ];
@@ -167,8 +142,8 @@ const membershipChatList = ['chat_id', 'user_id'];
 
 const fieldWhiteList = (list, isSessionData = false) => {
   return (request, response, next) => {
-    let body = !isSessionData ? request.body : request.body.sessionData;
-    
+    const body = !isSessionData ? request.body : request.body.sessionData;
+
     const fields = Object.keys(body);
     if (fields.length === 0) {
       return response.status(400).json({ message: 'No valid fields to update or insert' });
@@ -188,7 +163,7 @@ const fieldWhiteList = (list, isSessionData = false) => {
   };
 };
 const fieldObjectChecking = (object) => {
-  if (Object.keys(object).length === 0) return false;
+  if (Boolean(object) === false || Object.keys(object).length === 0) return false;
 
   for (const f in object) {
     if (f === undefined) return false;
@@ -209,5 +184,4 @@ export {
   sessionList,
   membershipChatList,
   checkChatRestrictions,
-  isSameUser,
 };

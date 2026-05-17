@@ -9,7 +9,7 @@ const addSession = async (request, response) => {
     const sessionData = request.body.sessionData;
 
     const user = await getUserByUsername(request.body.username);
-    
+  
     if (!user) {
       return response.status(401).json({
         message: 'User not found or username was wrong',

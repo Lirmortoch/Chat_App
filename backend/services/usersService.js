@@ -55,7 +55,7 @@ const getUser = async (public_id) => {
 const getUserByUsername = async (username) => {
   try {
     const [user] = await postgreSql`
-    SELECT username, password_hash, id 
+    SELECT username, password_hash, id, public_id 
     FROM chat.users u
     WHERE u.username = ${username}
   `;
@@ -129,29 +129,27 @@ const insertUser = async (fieldsData, avatar, password_hash) => {
   }
 };
 
-const updateUserInfo = async (fieldsData, fields, user_id) => {
+const updateUserInfo = async (fieldsData, cols, user_id, avatar) => {
   try {
     const updatedUserInfo = await postgreSql.begin(async (sql) => {
-      const cols = fields.filter((f) => f !== 'avatar').join(', ');
-
       const [updatedUserData] = await sql`
         UPDATE chat.users
         SET ${sql(fieldsData, cols)}
         WHERE id = ${user_id}
-        RETURNING ${cols}, public_id
+        RETURNING ${sql(cols)}, public_id
     `;
 
       let updatedUserAvatar = null;
-      if (fieldsData.avatar && fieldObjectChecking(fieldsData.avatar)) {
+      if (avatar) {
         const [photo] = await sql`
-        INSERT INTO chat.photos ${sql({ ...fieldsData.avatar.photo })}
+        INSERT INTO chat.photos ${sql({ ...avatar.photo })}
         RETURNING file_type, file_url, file_name, width, height, public_id
       `;
 
         [updatedUserAvatar] = await sql`
         INSERT INTO chat.user_profile_photos (is_main, user_id, photo_id)
         VALUES (
-          ${fieldsData.avatar.is_main},
+          ${avatar.is_main},
           ${user_id},
           ${photo.public_id}
         )
@@ -173,14 +171,25 @@ const updateUserInfo = async (fieldsData, fields, user_id) => {
     return err;
   }
 };
-const updateUserAccess = async (fieldsData, cols) => {
+const updateUserPassword = async (password_hash) => {
+  try {
+    await postgreSql`
+      UPDATE chat.users
+      SET password_hash = ${password_hash}
+    `;
+  } catch (err) {
+    error(`Error: ${err}`);
+    return err;
+  }
+}
+const updateUserAccess = async (fieldsData, cols, id) => {
   try {
     const [newAccess] = await postgreSql`
-    UPDATE chat.users
-    SET ${postgreSql(fieldsData, cols)}
-    WHERE id = ${fieldsData.user_id}
-    RETURNING ${cols}
-  `;
+      UPDATE chat.users u
+      SET ${postgreSql(fieldsData, cols)}
+      WHERE u.public_id = ${id}
+      RETURNING ${postgreSql(cols)}
+    `;
 
     return newAccess;
   } catch (err) {
@@ -212,6 +221,7 @@ export {
   insertUser,
 
   updateUserInfo,
+  updateUserPassword,
   updateUserAccess,
 
   deleteUser,

@@ -8,6 +8,7 @@ import {
   updateUserInfo,
   updateUserPrivileges,
   deleteUser,
+  updateUserPassword,
 } from '../controllers/usersController.js';
 
 import userSchema from '../validation/schemas/user.schema.js';
@@ -17,7 +18,6 @@ import {
   adminList,
   checkUserPrivileges,
   checkUserAccess,
-  isSameUser,
 } from '../utils/middleware.js';
 import { validator } from '../validation/utils/middleware.js';
 import { uploadAvatar } from '../utils/multer.js';
@@ -41,6 +41,13 @@ UsersRouter.put(
   updateUserInfo,
 );
 UsersRouter.put(
+  '/password/user/:public_id',
+  checkUserAccess,
+  fieldWhiteList(userList),
+  validator(userSchema),
+  updateUserPassword,
+);
+UsersRouter.put(
   '/access/user/:public_id', checkUserAccess,
   checkUserPrivileges('med-admin', 'high-admin'),
   fieldWhiteList(adminList),
@@ -48,6 +55,6 @@ UsersRouter.put(
   updateUserPrivileges,
 );
 
-UsersRouter.delete('/delete_self/:public_id', checkUserAccess, isSameUser, deleteUser);
+UsersRouter.delete('/delete_self/:public_id', checkUserAccess, deleteUser);
 
 export default UsersRouter;

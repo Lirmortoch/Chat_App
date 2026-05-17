@@ -6,6 +6,7 @@ import {
   getUser as _getUser,
   insertUser,
   updateUserInfo as _updateUserInfo,
+  updateUserPassword as _updateUserPassword,
   updateUserAccess,
   deleteUser as _deleteUser,
 } from '../services/usersService.js';
@@ -40,9 +41,9 @@ const getUser = async (request, response) => {
 
 const signupUser = async (request, response) => {
   try {
-    const { first_name, username, password, email, repeated_password } = request.body;
+    const { first_name, username, password, email } = request.body;
 
-    if (!first_name || !username || !password || !email || !repeated_password) {
+    if (!first_name || !username || !password || !email) {
       return response.status(400).json({ message: 'Missing required field' });
     }
 
@@ -76,11 +77,27 @@ const signupUser = async (request, response) => {
 
 const updateUserInfo = async (request, response) => {
   try {
-    const { fieldsData } = request.body;
+    const fieldsData = request.body;
     const user_id = request.user.id;
-    const fields = request.fields;
+    const cols = request.cols;
 
-    const updatedUser = await _updateUserInfo(fieldsData, fields, user_id);
+    let avatar = null;
+    if (fieldObjectChecking(request.file)) {
+      const avatarMetadata = await sharp(request.file.path).metadata();
+
+      avatar = {
+        photo: {
+          file_type: request.file.mimetype, 
+          file_url: request.file.path, 
+          file_name: request.file.originalname, 
+          width: avatarMetadata.width, 
+          height: avatarMetadata.height,
+        },
+        is_main: Boolean(request.body.avatar_is_main),
+      }
+    }
+
+    const updatedUser = await _updateUserInfo(fieldsData, cols, user_id, avatar);
 
     const ws = request.app.get('ws');
     ws.emit('user_updated', {
@@ -94,12 +111,28 @@ const updateUserInfo = async (request, response) => {
     response.status(500).json({ message: `Internal server error` });
   }
 };
+const updateUserPassword = async (request, response) => {
+  try {
+    const { password } = request.body;
+
+    const saltRounds = Number.parseInt(SALT_ROUNDS);
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    await _updateUserPassword(password_hash);
+
+    response.status(200).json({ message: 'Password was updated' });
+  } catch (err) {
+    error(err);
+    response.status(500).json({ message: `Internal server error` });
+  }
+}
 const updateUserPrivileges = async (request, response) => {
   try {
-    const { fieldsData } = request.body;
+    const fieldsData = request.body;
     const cols = request.cols;
+    const user_id = request.params.public_id;
 
-    const newAccess = await updateUserAccess(fieldsData, cols);
+    const newAccess = await updateUserAccess(fieldsData, cols, user_id);
 
     response.status(201).json(newAccess);
   } catch (err) {
@@ -128,6 +161,7 @@ export {
   signupUser,
 
   updateUserInfo,
+  updateUserPassword,
   updateUserPrivileges,
 
   deleteUser,
