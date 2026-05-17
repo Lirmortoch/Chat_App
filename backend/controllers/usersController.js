@@ -148,7 +148,7 @@ const deleteUser = async (request, response) => {
 
     const deletedUser = await _deleteUser(user_id, deleted, delete_reason);
 
-    response.status(201).json(deletedUser);
+    response.status(200).json({ message: 'User was deleted (temporary)', deletedUser });
   } catch (err) {
     error(err);
     response.status(500).json({ message: `Internal server error` });

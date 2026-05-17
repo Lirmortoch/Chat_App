@@ -91,7 +91,7 @@ const insertUser = async (fieldsData, avatar, password_hash) => {
         ${phone_number || ''},
         ${user_about || ''}
       )
-      RETURNING first_name, last_name, username, password_hash, email, phone_number, user_about, public_id
+      RETURNING first_name, last_name, username, email, phone_number, user_about, public_id
     `;
 
       let usersAvatar = null;
@@ -198,13 +198,13 @@ const updateUserAccess = async (fieldsData, cols, id) => {
   }
 };
 
-const deleteUser = async (user_id, deleted, delete_reason) => {
+const deleteUser = async (user_id, deleted, delete_reason = '') => {
   try {
     const [deletedUser] = await postgreSql`
     UPDATE chat.users 
     SET deleted = ${Boolean(deleted)}, delete_reason = ${delete_reason}
     WHERE id = ${user_id}
-    RETURNING email, name, phone_number, username, role, deleted, restricted, public_id
+    RETURNING first_name, username, email, phone_number, created_at, deleted, delete_reason, restricted, restrict_reason, role, public_id, last_name, user_about
   `;
 
     return deletedUser;
