@@ -13,6 +13,7 @@ const getSessionData = async (identifier) => {
     return user;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getUserRole = async (user_id) => {
@@ -27,6 +28,7 @@ const getUserRole = async (user_id) => {
     return access;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -44,38 +46,41 @@ const isUserRestrict = async (chat_public_id, user_public_id) => {
     return access;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getChatUserRole = async (chat_public_id, user_id) => {
   try {
     const [access] = await postgreSql`
-    SELECT cm.chat_id, cm.role, c.public_id
-    FROM chat.chats_members cm
-    JOIN chat.chats c ON cm.chat_id = c.id
-    WHERE c.public_id = ${chat_public_id} 
-      AND cm.user_id = ${user_id}
-      AND (cm.deleted IS FALSE OR cm.deleted IS NULL)
-      AND (cm.restricted IS FALSE OR cm.restricted IS NULL)
-  `;
+      SELECT cm.chat_id, cm.role, c.public_id
+      FROM chat.chats_members cm
+      JOIN chat.chats c ON cm.chat_id = c.id
+      WHERE c.public_id = ${chat_public_id} 
+        AND cm.user_id = ${user_id}
+        AND (cm.deleted IS FALSE OR cm.deleted IS NULL)
+        AND (cm.restricted IS FALSE OR cm.restricted IS NULL)
+    `;
 
     return access;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
 const getUserChatAccess = async (user_id, chat_id) => {
   try {
     const [membership] = await postgreSql`
-    SELECT 1 FROM chat.chats_members cm
-    WHERE cm.chat_id = ${chat_id} 
-      AND cm.user_id = ${user_id}
-      AND cm.deleted = false
-      AND cm.restricted = false
-  `;
+      SELECT 1 FROM chat.chats_members cm
+      WHERE cm.chat_id = ${chat_id} 
+        AND cm.user_id = ${user_id}
+        AND cm.deleted = false
+        AND cm.restricted = false
+    `;
     return Boolean(membership);
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getMessageOwner = async (message_public_id) => {
@@ -89,6 +94,7 @@ const getMessageOwner = async (message_public_id) => {
     return message;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -101,6 +107,7 @@ const getUserChats = async (user_id) => {
     return userChats;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -115,6 +122,7 @@ const isSameUser = async (user_public_id, user_id) => {
     return user;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 }
 

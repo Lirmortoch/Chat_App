@@ -144,8 +144,9 @@ const updateUserPrivileges = async (request, response) => {
 const deleteUser = async (request, response) => {
   try {
     const user_id = request.user.id;
+    const { deleted, delete_reason } = request.body;
 
-    const deletedUser = await _deleteUser(user_id);
+    const deletedUser = await _deleteUser(user_id, deleted, delete_reason);
 
     response.status(201).json(deletedUser);
   } catch (err) {
