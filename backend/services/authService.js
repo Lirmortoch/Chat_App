@@ -1,11 +1,11 @@
 import postgreSql from '../db.js';
 import { error } from '../utils/logger.js';
 
-const insertSession = async (user_id, sessionData, expireDate) => {
+const insertSession = async (user_id, sessionData, expireDate, currentDate) => {
   try {
     const [session] = await postgreSql`
-      INSERT INTO chat.sessions (user_id, ip_address, user_agent, identifier, expired_at, last_seen_at)
-      VALUES (${user_id}, ${postgreSql(sessionData)}, uuidv7(), ${expireDate}, now())
+      INSERT INTO chat.sessions (user_id, ip_address, user_agent, expired_at, last_seen_at, created_at)
+      VALUES (${user_id}, ${sessionData.ip_address}, ${sessionData.user_agent}, ${expireDate}, ${currentDate}, ${currentDate})
       RETURNING identifier
     `;
 

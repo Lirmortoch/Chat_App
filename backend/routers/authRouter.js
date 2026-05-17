@@ -12,11 +12,11 @@ import sessionSchema from '../validation/schemas/session.schema.js';
 AuthRouter.post(
   '/user/login',
   fieldWhiteList(userList),
-  fieldWhiteList(sessionList),
+  fieldWhiteList(sessionList, true),
   validator(userSchema),
   validator(sessionSchema),
   addSession,
 );
-AuthRouter.post('/user/logout', checkUserAccess, deleteSession);
+AuthRouter.delete('/user/logout', checkUserAccess, deleteSession);
 
 export default AuthRouter;

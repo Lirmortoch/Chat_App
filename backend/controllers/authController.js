@@ -6,17 +6,17 @@ import {insertSession, deleteSession as _deleteSession} from '../services/authSe
 
 const addSession = async (request, response) => {
   try {
-    const { fieldsData, sessionData } = request.body;
+    const sessionData = request.body.sessionData;
 
-    const user = await getUserByUsername(fieldsData.username);
-
+    const user = await getUserByUsername(request.body.username);
+    
     if (!user) {
       return response.status(401).json({
         message: 'User not found or username was wrong',
       });
     }
 
-    const passwordCorrect = await bcrypt.compare(fieldsData.password, user.password_hash);
+    const passwordCorrect = await bcrypt.compare(request.body.password, user.password_hash);
 
     if (!passwordCorrect) {
       return response.status(401).json({
@@ -24,10 +24,13 @@ const addSession = async (request, response) => {
       });
     }
 
-    const expireDate = new Date();
-    expireDate.setDate(expireDate.getDate() + 2);
+    const daysToExpire = 2;
+    const msTimeInDay = 24 * 60 * 60 * 1000;
 
-    const session = await insertSession(user.id, sessionData, expireDate);
+    const currentDate = new Date();
+    const expireDate = new Date(currentDate.getTime() + daysToExpire * msTimeInDay);
+    
+    const session = await insertSession(user.id, sessionData, expireDate, currentDate);
 
     response.cookie('identifier', session.identifier, {
       httpOnly: true,

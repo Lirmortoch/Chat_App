@@ -160,13 +160,14 @@ const userList = [
   'password',
   'repeated_password',
   'avatar_is_main',
+  'sessionData',
 ];
 const sessionList = ['ip_address', 'user_agent'];
 const membershipChatList = ['chat_id', 'user_id'];
 
-const fieldWhiteList = (list) => {
+const fieldWhiteList = (list, isSessionData = false) => {
   return (request, response, next) => {
-    const { body } = request;
+    let body = !isSessionData ? request.body : request.body.sessionData;
     
     const fields = Object.keys(body);
     if (fields.length === 0) {
@@ -175,6 +176,7 @@ const fieldWhiteList = (list) => {
 
     fields.forEach((field) => {
       if (!list.includes(field)) {
+        console.log(field)
         return response.status(400).json({ message: 'Invalid field' });
       }
     });
