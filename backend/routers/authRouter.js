@@ -1,6 +1,7 @@
 import express from 'express';
 const AuthRouter = express.Router();
 
+import { checkUserAccess } from '../utils/middleware.js';
 import { addSession, deleteSession } from '../controllers/authController.js';
 import { fieldWhiteList, userList, sessionList } from '../utils/middleware.js';
 
@@ -16,6 +17,6 @@ AuthRouter.post(
   validator(sessionSchema),
   addSession,
 );
-AuthRouter.delete('/user/logout', deleteSession);
+AuthRouter.post('/user/logout', checkUserAccess, deleteSession);
 
 export default AuthRouter;

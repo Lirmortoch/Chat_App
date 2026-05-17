@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import sharp from 'sharp';
 
 import {
   getAllUsers,
@@ -10,6 +11,7 @@ import {
 } from '../services/usersService.js';
 import { SALT_ROUNDS } from '../utils/config.js';
 import { error } from '../utils/logger.js';
+import { fieldObjectChecking } from '../utils/middleware.js';
 
 const getUsers = async (request, response) => {
   try {
@@ -38,16 +40,32 @@ const getUser = async (request, response) => {
 
 const signupUser = async (request, response) => {
   try {
-    const { first_name, username, password, email, repeated_password } = request.body.fieldsData;
+    const { first_name, username, password, email, repeated_password } = request.body;
 
     if (!first_name || !username || !password || !email || !repeated_password) {
       return response.status(400).json({ message: 'Missing required field' });
     }
 
-    const saltRounds = SALT_ROUNDS;
+    let avatar = null;
+    if (fieldObjectChecking(request.file)) {
+      const avatarMetadata = await sharp(request.file.path).metadata();
+
+      avatar = {
+        photo: {
+          file_type: request.file.mimetype, 
+          file_url: request.file.path, 
+          file_name: request.file.originalname, 
+          width: avatarMetadata.width, 
+          height: avatarMetadata.height,
+        },
+        is_main: Boolean(request.body.avatar_is_main),
+      }
+    }
+
+    const saltRounds = Number.parseInt(SALT_ROUNDS);
     const password_hash = await bcrypt.hash(password, saltRounds);
 
-    const insertedUser = await insertUser(request.body.fieldsData, password_hash);
+    const insertedUser = await insertUser(request.body, avatar, password_hash);
 
     response.status(201).json(insertedUser);
   } catch (err) {
@@ -63,6 +81,12 @@ const updateUserInfo = async (request, response) => {
     const fields = request.fields;
 
     const updatedUser = await _updateUserInfo(fieldsData, fields, user_id);
+
+    const ws = request.app.get('ws');
+    ws.emit('user_updated', {
+      public_id: request.user.public_id,
+      updatedUser
+    });
 
     response.status(201).json(updatedUser);
   } catch (err) {

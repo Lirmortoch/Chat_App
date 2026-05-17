@@ -14,6 +14,7 @@ import contactSchema from '../validation/schemas/contact.schema.js';
 
 import { fieldWhiteList, userList, checkUserPrivileges } from '../utils/middleware.js';
 import { validator } from '../validation/utils/middleware.js';
+import { uploadAvatar } from '../utils/multer.js';
 
 ContactsRouter.get('/', checkUserPrivileges('owner'), getAllContacts);
 ContactsRouter.get('/:public_id', getContact);
@@ -21,6 +22,7 @@ ContactsRouter.get('/user/:public_id', getUserContacts);
 
 ContactsRouter.post(
   '/',
+  uploadAvatar,
   fieldWhiteList(userList),
   validator(contactSchema),
   addNewContact,
@@ -34,6 +36,7 @@ ContactsRouter.put(
 );
 ContactsRouter.put(
   '/contact/avatar/:public_id',
+  uploadAvatar,
   fieldWhiteList(userList),
   validator(contactSchema),
   updateContactAvatar,

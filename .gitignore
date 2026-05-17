@@ -26,5 +26,6 @@ dist-ssr
 # Configuration files
 .env
 
-# public
+# public and others
 public
+uploads

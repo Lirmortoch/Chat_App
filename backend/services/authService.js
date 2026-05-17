@@ -12,6 +12,7 @@ const insertSession = async (user_id, sessionData, expireDate) => {
     return session;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const deleteSession = async (identifier) => {
@@ -24,6 +25,7 @@ const deleteSession = async (identifier) => {
     return deletedSession;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 

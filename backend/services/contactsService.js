@@ -12,6 +12,7 @@ const getAllContacts = async () => {
     return contacts;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getContact = async (public_id) => {
@@ -54,6 +55,7 @@ const getContact = async (public_id) => {
     return contact;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getUsersContacts = async (user_id) => {
@@ -107,6 +109,7 @@ const getUsersContacts = async (user_id) => {
     return contacts;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -166,6 +169,7 @@ const insertContact = async (fieldsData, ownerId) => {
     return insertedContact;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -181,6 +185,7 @@ const updateContactInfo = async (fieldsData, cols, public_id) => {
     return updatedContact;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const updateContactAvatar = async (avatar, contact_public_id) => {
@@ -213,6 +218,7 @@ const updateContactAvatar = async (avatar, contact_public_id) => {
     return updatedAvatar;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -227,6 +233,7 @@ const deleteContact = async (public_id) => {
     return deletedContact;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 

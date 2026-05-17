@@ -23,6 +23,7 @@ import {
   checkChatRestrictions,
 } from '../utils/middleware.js';
 import { validator } from '../validation/utils/middleware.js';
+import { uploadAvatar } from '../utils/multer.js';
 
 ChatsRouter.get('/', checkUserPrivileges('owner'), getAllChats);
 // ChatsRouter.get('/chat/:public_id', checkChatAccess(), async (request, response) => {
@@ -44,6 +45,7 @@ ChatsRouter.get('/user/:public_id', checkChatAccess(), getUserChats);
 
 ChatsRouter.post(
   '/',
+  uploadAvatar,
   fieldWhiteList(userList),
   validator(chatSchema),
   createNewChat,

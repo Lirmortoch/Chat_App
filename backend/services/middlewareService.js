@@ -104,6 +104,20 @@ const getUserChats = async (user_id) => {
   }
 };
 
+const isSameUser = async (user_public_id, user_id) => {
+  try {
+    const [user] = await postgreSql`
+      SELECT 1 FROM chat.users u
+      WHERE u.public_id = ${user_public_id}
+      AND u.id = ${user_id}
+    `;
+
+    return user;
+  } catch (err) {
+    error(`Error: ${err}`);
+  }
+}
+
 export {
   getSessionData,
   getUserRole,
@@ -115,4 +129,5 @@ export {
   getMessageOwner,
 
   getUserChats,
+  isSameUser,
 };

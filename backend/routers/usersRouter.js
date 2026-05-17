@@ -16,32 +16,38 @@ import {
   userList,
   adminList,
   checkUserPrivileges,
+  checkUserAccess,
+  isSameUser,
 } from '../utils/middleware.js';
 import { validator } from '../validation/utils/middleware.js';
+import { uploadAvatar } from '../utils/multer.js';
 
-UsersRouter.get('/', checkUserPrivileges('owner'), getUsers);
-UsersRouter.get('/:public_id', getUser);
+UsersRouter.get('/', checkUserAccess, checkUserPrivileges('owner'), getUsers);
+UsersRouter.get('/:public_id', checkUserAccess, getUser);
 UsersRouter.post(
   '/signup',
+  uploadAvatar,
   fieldWhiteList(userList),
   validator(userSchema),
   signupUser,
 );
 
 UsersRouter.put(
-  '/:public_id',
+  '/:public_id', 
+  uploadAvatar,
+  checkUserAccess,
   fieldWhiteList(userList),
   validator(userSchema),
   updateUserInfo,
 );
 UsersRouter.put(
-  '/access/user/:public_id',
+  '/access/user/:public_id', checkUserAccess,
   checkUserPrivileges('med-admin', 'high-admin'),
   fieldWhiteList(adminList),
   validator(userSchema),
   updateUserPrivileges,
 );
 
-UsersRouter.delete('/:public_id', deleteUser);
+UsersRouter.delete('/delete_self/:public_id', checkUserAccess, isSameUser, deleteUser);
 
 export default UsersRouter;

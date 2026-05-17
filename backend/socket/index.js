@@ -1,4 +1,4 @@
-import middlewareService from '../services/middlewareService.js';
+import { getUserChats } from '../services/middlewareService.js';
 import { info, error } from '../utils/logger.js';
 
 import {
@@ -15,7 +15,7 @@ const initializeSocket = (io) => {
       try {
         socket.join(socket.user.public_id);
 
-        const userChats = await middlewareService.getUserChats(socket.user.id);
+        const userChats = await getUserChats(socket.user.id);
 
         userChats.forEach((chat) => {
           socket.join(chat.chat_id);

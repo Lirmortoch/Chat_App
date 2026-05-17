@@ -1,10 +1,11 @@
 const validator = (schema) => {
   return (request, response, next) => {
-    const fieldsData = request.body.fieldsData || request.body.sessionData;
-    const fieldsName = request.body.sessionData === 'undefined' ? 'fieldsData' : 'sessionData';
+    const isNested = request.body.fieldsData || request.body.sessionData;
+    const dataToValidate = isNested || request.body;
 
-    const { error, value } = schema.validate(fieldsData, {
+    const { error, value } = schema.validate(dataToValidate, {
       abortEarly: false,
+      allowUnknown: true, 
     });
 
     if (error) {
@@ -14,7 +15,14 @@ const validator = (schema) => {
       });
     }
 
-    request.body[fieldsName] = value;
+    if (request.body.fieldsData) {
+      request.body.fieldsData = value;
+    } else if (request.body.sessionData) {
+      request.body.sessionData = value;
+    } else {
+      request.body = value;
+    }
+
     next();
   };
 };

@@ -12,6 +12,7 @@ const getAllUsers = async () => {
     return users;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getUser = async (public_id) => {
@@ -48,6 +49,7 @@ const getUser = async (public_id) => {
     return user;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getUserByUsername = async (username) => {
@@ -61,17 +63,19 @@ const getUserByUsername = async (username) => {
     return user;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
-const insertUser = async (fieldsData, password_hash) => {
+const insertUser = async (fieldsData, avatar, password_hash) => {
   try {
-    const { first_name, last_name, username, email, phone_number, avatar, user_about } = fieldsData;
+    const { first_name, last_name, username, email, phone_number, user_about } = fieldsData;
 
     const insertedUser = await postgreSql.begin(async (sql) => {
       const [usersData] = await sql`
       INSERT INTO chat.users (
         first_name,
+        last_name,
         username,
         password_hash,
         email,
@@ -80,29 +84,30 @@ const insertUser = async (fieldsData, password_hash) => {
       )
       VALUES (
         ${first_name},
-        ${last_name},
+        ${last_name || ''},
         ${username},
         ${password_hash},
         ${email},
-        ${phone_number},
-        ${user_about}
+        ${phone_number || ''},
+        ${user_about || ''}
       )
-      RETURNING public_id, email, name, phone_number, username, role, user_about
+      RETURNING first_name, last_name, username, password_hash, email, phone_number, user_about, public_id
     `;
 
       let usersAvatar = null;
-      if (avatar && fieldObjectChecking(avatar)) {
-        const [photo] = await sql`
-        INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
-        ${sql({ ...avatar.photo })}
+
+      if (fieldObjectChecking(avatar)) {
+      const [photo] = await sql`
+        INSERT INTO chat.photos ${sql({ ...avatar.photo })}
         RETURNING file_type, file_url, file_name, width, height, public_id
       `;
-
-        [usersAvatar] = await sql`
+      
+      const [user_id] = await sql`SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`;
+      [usersAvatar] = await sql`
         INSERT INTO chat.user_profile_photos (is_main, user_id, photo_id)
         VALUES (
           ${avatar.is_main},
-          ${`SELECT id FROM chat.users WHERE public_id = ${usersData.public_id}`},
+          ${user_id.id},
           ${photo.public_id}
         )
         RETURNING is_main
@@ -116,10 +121,11 @@ const insertUser = async (fieldsData, password_hash) => {
         usersAvatar,
       };
     });
-
+    
     return insertedUser;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -129,17 +135,16 @@ const updateUserInfo = async (fieldsData, fields, user_id) => {
       const cols = fields.filter((f) => f !== 'avatar').join(', ');
 
       const [updatedUserData] = await sql`
-      UPDATE chat.users
-      SET ${sql(fieldsData, cols)}
-      WHERE id = ${user_id}
-      RETURNING ${cols}, public_id
+        UPDATE chat.users
+        SET ${sql(fieldsData, cols)}
+        WHERE id = ${user_id}
+        RETURNING ${cols}, public_id
     `;
 
       let updatedUserAvatar = null;
       if (fieldsData.avatar && fieldObjectChecking(fieldsData.avatar)) {
         const [photo] = await sql`
-        INSERT INTO chat.photos (file_type, file_url, file_name, width, height)
-        ${sql({ ...fieldsData.avatar.photo })}
+        INSERT INTO chat.photos ${sql({ ...fieldsData.avatar.photo })}
         RETURNING file_type, file_url, file_name, width, height, public_id
       `;
 
@@ -165,6 +170,7 @@ const updateUserInfo = async (fieldsData, fields, user_id) => {
     return updatedUserInfo;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const updateUserAccess = async (fieldsData, cols) => {
@@ -179,6 +185,7 @@ const updateUserAccess = async (fieldsData, cols) => {
     return newAccess;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -193,6 +200,7 @@ const deleteUser = async (user_id) => {
     return deletedUser;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 

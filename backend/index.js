@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import ws from 'socket.io';
+import { Server } from 'socket.io';
 
 import app from './app.js'; // the actual Express application
 import initializeSocket from './socket/index.js';
@@ -8,7 +8,7 @@ import { info } from './utils/logger.js';
 
 const httpServer = createServer(app);
 
-const socketServer = new ws.Server(httpServer, {
+const socketServer = new Server(httpServer, {
   cors: { origin: 'http://localhost:5173' },
 });
 

@@ -1,20 +1,21 @@
 /* eslint-disable no-unused-vars */
 import assert from 'node:assert';
-import { test, after, beforeEach, describe } from 'node:test';
+import { test, after, beforeEach, describe, before } from 'node:test';
 import supertest from 'supertest';
 import bcrypt from 'bcrypt';
 
 import app from '../app.js';
 import { info } from '../utils/logger.js';
 import seed from './utils/seed.js';
+import postgreSql from '../db.js';
 
 const api = supertest(app);
 
-describe('when there is initially has some data saved', () => {
+describe('test backend', () => {
   let session = null;
   let testData = null;
 
-  beforeEach(async () => {
+  before(async () => {
     const data = await seed();
 
     session = data.session;
@@ -28,7 +29,8 @@ describe('when there is initially has some data saved', () => {
     };
   });
 
-  test('users are returned as json', async () => {
+  describe('when there is initially has some data saved', () => {
+    test('users are returned as json', async () => {
     await api
       .get('/api/marazam/users')
       .set('Cookie', [
@@ -36,34 +38,66 @@ describe('when there is initially has some data saved', () => {
       ])
       .expect(200)
       .expect('Content-Type', /application\/json/);
+    });
+
+    test('all users returned', async () => {
+      const response = await api
+        .get('/api/marazam/users')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ]);
+        
+      assert.strictEqual(response.body.length, testData.users.length);
+    });
+    test('all messages returned', async () => {
+      const response = await api
+        .get('/api/marazam/messages')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ]);
+        
+      assert.strictEqual(response.body.length, testData.messages.length);
+    });
+    test('all chats returned', async () => {
+      const response = await api
+        .get('/api/marazam/chats')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ]);
+      
+      assert.strictEqual(response.body.length, testData.chats.length);
+    });
   });
 
-  test('all users returned', async () => {
-    const response = await api
+  describe('add some data to system (users, messages, chats etc)', () => {
+    test('add user to system', async () => {
+      const newUser = {
+        username: 'lirmortoch',
+        email: 'email1231@gmail.com',
+
+        first_name: 'Roberto',
+
+        password: '542fda321CBZX@',
+        repeated_password: '542fda321CBZX@',
+      };
+      const response = await api
+        .post('api/marazam/users/signup')
+        .send(newUser);
+ 
+      const usersAtTheEnd = await api
       .get('/api/marazam/users')
       .set('Cookie', [
         `identifier=${session.identifier}`
       ]);
-      
-    assert.strictEqual(response.body.length, testData.users.length);
-  });
-  test('all messages returned', async () => {
-    const response = await api
-      .get('/api/marazam/messages')
-      .set('Cookie', [
-        `identifier=${session.identifier}`
-      ]);
-      
-    assert.strictEqual(response.body.length, testData.messages.length);
-  });
-  test('all chats returned', async () => {
-    const response = await api
-      .get('/api/marazam/chats')
-      .set('Cookie', [
-        `identifier=${session.identifier}`
-      ]);
-      
-    assert.strictEqual(response.body.length, testData.chats.length);
-  });
 
+      assert.strictEqual(usersAtTheEnd.length, testData.users.length + 1);
+
+      const usernames = usersAtTheEnd.map(u => u.username);
+      assert(usernames.includes(newUser.username));
+    });
+  });
+});
+
+after(async () => {
+  await postgreSql.end();
 });

@@ -26,12 +26,11 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use('/api/auth', AuthRouter);
+app.use('/api/marazam/auth', AuthRouter);
 
-app.use('/api/marazam/', checkUserAccess);
-app.use('/api/marazam/chats', ChatsRouter);
-app.use('/api/marazam/contacts', ContactsRouter);
-app.use('/api/marazam/messages', MessagesRouter);
+app.use('/api/marazam/chats', checkUserAccess, ChatsRouter);
+app.use('/api/marazam/contacts', checkUserAccess, ContactsRouter);
+app.use('/api/marazam/messages', checkUserAccess, MessagesRouter);
 app.use('/api/marazam/users', UsersRouter);
 
 export default app;

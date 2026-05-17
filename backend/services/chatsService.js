@@ -12,6 +12,7 @@ const getAllChats = async () => {
     return chats;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getChat = async (public_id) => {
@@ -52,6 +53,7 @@ const getChat = async (public_id) => {
     return chat;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getChatsByUser = async (user_id) => {
@@ -126,6 +128,7 @@ const getChatsByUser = async (user_id) => {
     return chats;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -201,6 +204,7 @@ const insertChat = async (recipient_public_id, type, name, avatar, creator_id, c
     return insertedChat;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -243,6 +247,7 @@ const updateChat = async (fieldsData, chat_id, fields) => {
     return updatedChat;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -258,6 +263,7 @@ const updateChatMembers = async (fieldsData, cols, user_id, chat_id) => {
     return newAccess;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -291,6 +297,7 @@ const addNewUserToChat = async (user_public_id, chat_id, chat_public_id) => {
     return newAccess;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 }
 const deleteUserFromChat = async (user_public_id, chat_id, chat_public_id) => {
@@ -323,6 +330,7 @@ const deleteUserFromChat = async (user_public_id, chat_id, chat_public_id) => {
     return newAccess;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 }
 
@@ -337,6 +345,7 @@ const deleteChat = async (chat_id) => {
     return deletedChat;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 

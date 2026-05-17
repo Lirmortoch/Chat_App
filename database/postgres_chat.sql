@@ -50,7 +50,7 @@ CREATE TABLE chat.users (
 	CONSTRAINT users_pk_idx PRIMARY KEY (id),
 	CONSTRAINT users_unique UNIQUE (username),
 	CONSTRAINT users_unique_1 UNIQUE (email),
-	CONSTRAINT users_unique_2 UNIQUE (phone_number),
+	-- CONSTRAINT users_unique_2 UNIQUE (phone_number),
 	CONSTRAINT users_unique_3 UNIQUE (public_id)
 );
 

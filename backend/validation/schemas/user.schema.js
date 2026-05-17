@@ -7,7 +7,7 @@ import avatarSchema from './avatar.schema.js';
 const userSchema = Joi.object({
   first_name: Joi.string().min(3).max(125),
   username: Joi.string().min(5).max(45),
-  password: Joi.string().min(12).max(50).pattern(new RegExp('^\S{12,50}$')),
+  password: Joi.string().min(12).max(50).pattern(new RegExp(/^\S{12,50}$/)),
   repeated_password: Joi.ref('password'),
   email: Joi.string().email().max(135),
 

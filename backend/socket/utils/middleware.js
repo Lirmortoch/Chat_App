@@ -1,7 +1,7 @@
 import cookie from 'cookie';
 
-import middlewareService from '../../services/middlewareService.js';
-import logger from '../../utils/logger.js';
+import { getSessionData } from '../../services/middlewareService.js';
+import { error } from '../../utils/logger.js';
 
 const checkSocketUserAccess = async (socket, next) => {
   try {
@@ -17,7 +17,7 @@ const checkSocketUserAccess = async (socket, next) => {
       return new Error('Authentication error: No identifier');
     }
 
-    const user = await middlewareService.getSessionData(identifier);
+    const user = await getSessionData(identifier);
 
     if (!user) {
       return new Error({ type: 'auth-error', message: 'Authentication error: Session invalid' });
@@ -30,7 +30,7 @@ const checkSocketUserAccess = async (socket, next) => {
     socket.user = user;
     next();
   } catch (err) {
-    logger.error('Socket Auth Error:', err);
+    error('Socket Auth Error:', err);
     return new Error({ type: 'server-error', message: `Internal server error: ${err}` });
   }
 };

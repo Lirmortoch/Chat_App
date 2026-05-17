@@ -11,6 +11,7 @@ const getAllMessages = async () => {
     return messages;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getMsg = async (public_id) => {
@@ -39,6 +40,7 @@ const getMsg = async (public_id) => {
     return message;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 const getChatMessages = async (user_id, chatId) => {
@@ -86,6 +88,7 @@ const getChatMessages = async (user_id, chatId) => {
     return messages;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -116,6 +119,7 @@ const insertMsg = async (message, additionals, chat_id, sender_id) => {
     return insertedMessage;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 
@@ -158,6 +162,7 @@ const updateMessage = async (fieldsData, fields, messageInternalId) => {
     return updatedMessage;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 // const setReadMessages = async () => {
@@ -177,6 +182,7 @@ const deleteMessage = async (messageInternalId) => {
     return deletedMessage;
   } catch (err) {
     error(`Error: ${err}`);
+    return err;
   }
 };
 

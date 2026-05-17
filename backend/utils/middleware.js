@@ -1,4 +1,4 @@
-import { getSessionData, getUserRole, getChatUserRole, getMessageOwner, isUserRestrict } from '../services/middlewareService.js';
+import { getSessionData, getUserRole, getChatUserRole, getMessageOwner, isUserRestrict, isSameUser as _isSameUser } from '../services/middlewareService.js';
 import { error } from './logger.js';
 
 const checkUserAccess = async (request, response, next) => {
@@ -124,6 +124,24 @@ const checkMessageAccess = async (request, response, next) => {
   }
 };
 
+const isSameUser = async (request, response, next) => {
+  try {
+    const { user_public_id } = request.params;
+    const user_id = request.user.id;
+
+    const user = await _isSameUser(user_public_id, user_id);
+
+    if (user !== 1) {
+      return response.status(401).json({ message: `You can't delete another user!` });
+    }
+    
+    next();
+  } catch (err) {
+    error('Middleware Error:', err);
+    response.status(500).json({ message: 'Internal server error during access check' });
+  }
+}
+
 // const errorHandler = async (request, response, next) => {};
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
@@ -141,15 +159,16 @@ const userList = [
   'username',
   'password',
   'repeated_password',
+  'avatar_is_main',
 ];
 const sessionList = ['ip_address', 'user_agent'];
 const membershipChatList = ['chat_id', 'user_id'];
 
 const fieldWhiteList = (list) => {
   return (request, response, next) => {
-    const { fieldsData } = request.body;
-
-    const fields = Object.keys(fieldsData);
+    const { body } = request;
+    
+    const fields = Object.keys(body);
     if (fields.length === 0) {
       return response.status(400).json({ message: 'No valid fields to update or insert' });
     }
@@ -167,8 +186,10 @@ const fieldWhiteList = (list) => {
   };
 };
 const fieldObjectChecking = (object) => {
+  if (Object.keys(object).length === 0) return false;
+
   for (const f in object) {
-    if (f !== undefined) return false;
+    if (f === undefined) return false;
   }
 
   return true;
@@ -186,4 +207,5 @@ export {
   sessionList,
   membershipChatList,
   checkChatRestrictions,
+  isSameUser,
 };
