@@ -144,9 +144,8 @@ const updateUserPrivileges = async (request, response) => {
 const deleteUser = async (request, response) => {
   try {
     const user_id = request.user.id;
-    const { deleted, delete_reason } = request.body;
 
-    const deletedUser = await _deleteUser(user_id, deleted, delete_reason);
+    const deletedUser = await _deleteUser(user_id);
 
     response.status(200).json({ message: 'User was deleted (temporary)', deletedUser });
   } catch (err) {

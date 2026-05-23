@@ -198,11 +198,10 @@ const updateUserAccess = async (fieldsData, cols, id) => {
   }
 };
 
-const deleteUser = async (user_id, deleted, delete_reason = '') => {
+const deleteUser = async (user_id) => {
   try {
     const [deletedUser] = await postgreSql`
-    UPDATE chat.users 
-    SET deleted = ${Boolean(deleted)}, delete_reason = ${delete_reason}
+    DELETE FROM chat.users 
     WHERE id = ${user_id}
     RETURNING first_name, username, email, phone_number, created_at, deleted, delete_reason, restricted, restrict_reason, role, public_id, last_name, user_about
   `;

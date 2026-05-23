@@ -17,12 +17,11 @@ const insertSession = async (user_id, sessionData, expireDate, currentDate) => {
 };
 const deleteSession = async (identifier) => {
   try {
-    const [deletedSession] = await postgreSql`
-      DELETE * FROM chat.sessions
+    await postgreSql`
+      DELETE FROM chat.sessions
       WHERE identifier = ${identifier}
     `;
-
-    return deletedSession;
+    
   } catch (err) {
     error(`Error: ${err}`);
     return err;

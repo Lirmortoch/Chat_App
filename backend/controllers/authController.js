@@ -47,9 +47,9 @@ const addSession = async (request, response) => {
 };
 const deleteSession = async (request, response) => {
   try {
-    const [deletedSession] = await _deleteSession(request.cookies.identifier);
+    await _deleteSession(request.cookies.identifier);
 
-    response.status(201).json(deletedSession);
+    response.status(200).end();
   } catch (err) {
     error(err);
     response.status(500).json({ message: 'Internal server error' });
