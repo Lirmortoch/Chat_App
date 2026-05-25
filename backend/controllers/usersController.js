@@ -27,7 +27,7 @@ const getUsers = async (request, response) => {
 const getUser = async (request, response) => {
   try {
     const user = await _getUser(request.params.public_id);
-
+    
     if (!user) {
       return response.status(404).json({ message: 'User not found' });
     }

@@ -19,7 +19,8 @@ const getUser = async (public_id) => {
   try {
     const [user] = await postgreSql`
     SELECT
-      u.name, 
+      u.first_name, 
+      u.last_name,
       u.username, 
       u.email, 
       u.phone_number, 
@@ -42,8 +43,8 @@ const getUser = async (public_id) => {
     ELSE NULL END AS avatar
     FROM chat.users u
     LEFT JOIN chat.user_profile_photos upp ON u.id = upp.user_id
-    LEFT JOIN chat.photos ph ON upp.photo_id = ph.id
-    WHERE u.public_id = ${public_id}
+    LEFT JOIN chat.photos ph ON upp.photo_id = ph.public_id
+    WHERE u.public_id = ${public_id}::uuid
   `;
 
     return user;

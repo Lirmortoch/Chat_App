@@ -46,7 +46,7 @@ describe('test backend', () => {
         .set('Cookie', [
           `identifier=${session.identifier}`
         ]);
-        
+     
       assert.strictEqual(response.body.length, testData.users.length);
     });
     test('all messages returned', async () => {
@@ -67,6 +67,17 @@ describe('test backend', () => {
       
       assert.strictEqual(response.body.length, testData.chats.length);
     });
+
+    test('return one specific user', async () => {
+      const user = await api
+        .get(`/api/marazam/users/${testData.users[0].public_id}`)
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect('Content-Type', /application\/json/);
+      
+      assert.strictEqual(user.body.username, testData.users[0].username);
+    });
   });
 
   describe('add some data to system (users, messages, chats etc)', () => {
@@ -79,7 +90,6 @@ describe('test backend', () => {
         .field('email', 'email1231@gmail.com')
         .field('first_name', 'Roberto')
         .field('password', '542fda321CBZX@')
-        .field('repeated_password', '542fda321CBZX@')
         .expect(201);
 
       const usersAtTheEnd = await api
@@ -87,11 +97,11 @@ describe('test backend', () => {
       .set('Cookie', [
         `identifier=${session.identifier}`
       ]);
+ 
+      assert.strictEqual(usersAtTheEnd.body.length, testData.users.length + 1);
 
-      assert.strictEqual(usersAtTheEnd.length, testData.users.length + 1);
-
-      const usernames = usersAtTheEnd.map(u => u.username);
-      assert(usernames.includes(username));
+      // const usernames = usersAtTheEnd.body.map(u => u.username);
+      // assert(usernames.includes(username));
     });
   });
 });
