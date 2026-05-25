@@ -80,14 +80,15 @@ async function seed() {
 
     info('🔑 creating active session..');
     const [session] = await postgreSql`
-      INSERT INTO chat.sessions (user_id, expired_at, last_seen_at, ip_address, user_agent, identifier)
+      INSERT INTO chat.sessions (user_id, expired_at, last_seen_at, ip_address, user_agent, identifier, created_at)
       VALUES (
         ${users[0].id}, 
         NOW() + INTERVAL '2 days', 
         NOW(), 
         '127.0.0.1', 
         'Mozilla/5.0 (Seed Data)', 
-        uuidv7()
+        uuidv7(),
+        NOW()
       )
       RETURNING identifier
     `;

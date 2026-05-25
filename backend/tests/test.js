@@ -17,7 +17,7 @@ describe('test backend', () => {
 
   before(async () => {
     const data = await seed();
-
+    
     session = data.session;
     
     testData = {
@@ -70,20 +70,18 @@ describe('test backend', () => {
   });
 
   describe('add some data to system (users, messages, chats etc)', () => {
-    test('add user to system', async () => {
-      const newUser = {
-        username: 'lirmortoch',
-        email: 'email1231@gmail.com',
+    test('add user to system without photo', async () => {
+      const username = 'lirmortoch';
 
-        first_name: 'Roberto',
-
-        password: '542fda321CBZX@',
-        repeated_password: '542fda321CBZX@',
-      };
       const response = await api
-        .post('api/marazam/users/signup')
-        .send(newUser);
- 
+        .post('/api/marazam/users/signup')
+        .field('username', username)
+        .field('email', 'email1231@gmail.com')
+        .field('first_name', 'Roberto')
+        .field('password', '542fda321CBZX@')
+        .field('repeated_password', '542fda321CBZX@')
+        .expect(201);
+
       const usersAtTheEnd = await api
       .get('/api/marazam/users')
       .set('Cookie', [
@@ -93,7 +91,7 @@ describe('test backend', () => {
       assert.strictEqual(usersAtTheEnd.length, testData.users.length + 1);
 
       const usernames = usersAtTheEnd.map(u => u.username);
-      assert(usernames.includes(newUser.username));
+      assert(usernames.includes(username));
     });
   });
 });

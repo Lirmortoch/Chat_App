@@ -118,7 +118,7 @@ const checkMessageAccess = async (request, response, next) => {
   }
 };
 
-// const errorHandler = async (request, response, next) => {};
+const errorHandler = async (request, response, next) => {};
 
 const adminList = ['restrict_reason', 'delete_reason', 'restricted', 'deleted', 'role'];
 const userList = [
@@ -144,20 +144,23 @@ const fieldWhiteList = (list, isSessionData = false) => {
   return (request, response, next) => {
     const body = !isSessionData ? request.body : request.body.sessionData;
 
+    if (!body) {
+      return response.status(400).json({ message: 'Request body is missing or invalid' });
+    }
+    
     const fields = Object.keys(body);
     if (fields.length === 0) {
       return response.status(400).json({ message: 'No valid fields to update or insert' });
     }
 
-    fields.forEach((field) => {
+    for (const field of fields) {
       if (!list.includes(field)) {
-        console.log(field)
-        return response.status(400).json({ message: 'Invalid field' });
+        return response.status(400).json({ message: `Invalid field: ${field}` });
       }
-    });
+    }
 
     request.fields = fields;
-    request.cols = fields.join(', ');
+    request.cols = fields;
 
     next();
   };
