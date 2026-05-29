@@ -1,10 +1,17 @@
 import { nanoid } from 'nanoid';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import postgreSql from '../../db.js';
 import { info, error } from '../../utils/logger.js';
 
+
 async function seed() {
   info('🌱 Seeding process started...');
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const testImagesFolder = './tests/public/imgs';
 
   try {
     info('🧹 Cleanup old data...');
@@ -14,9 +21,9 @@ async function seed() {
 
     info('📸 adding photos...');
     const photosData = [
-      { file_url: '../tests/public/imgs/user1.jpg', file_type: 'image/jpeg', file_name: 'user1.jpg', width: 800, height: 800 },
-      { file_url: '../tests/public/imgs/user2.jpg', file_type: 'image/jpeg', file_name: 'user2.jpg', width: 800, height: 800 },
-      { file_url: '../tests/public/imgs/group.jpg', file_type: 'image/jpeg', file_name: 'group.jpg', width: 1024, height: 1024 },
+      { file_url: path.resolve(__dirname, `${testImagesFolder}/user1.jpg`), file_type: 'image/jpeg', file_name: 'user1.jpg', width: 800, height: 800 },
+      { file_url: path.resolve(__dirname, `${testImagesFolder}/user2.jpg`), file_type: 'image/jpeg', file_name: 'user2.jpg', width: 800, height: 800 },
+      { file_url: path.resolve(__dirname, `${testImagesFolder}/group.jpg`), file_type: 'image/jpeg', file_name: 'group.jpg', width: 1024, height: 1024 },
     ];
     const photos = await postgreSql`
       INSERT INTO chat.photos ${postgreSql(photosData, 'file_url', 'file_type', 'file_name', 'width', 'height')}
