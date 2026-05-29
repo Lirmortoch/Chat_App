@@ -20,7 +20,7 @@ const getAllMessages = async (request, response) => {
 };
 const getMessage = async (request, response) => {
   try {
-    const message = await getMsg(request.params.message_public_id);
+    const message = await getMsg(request.params.public_id);
 
     if (!message) {
       response.status(404).json({ message: 'Message not found' });

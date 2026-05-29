@@ -78,6 +78,16 @@ describe('test backend', () => {
       
       assert.strictEqual(user.body.username, testData.users[0].username);
     });
+    test('return one specific message', async () => {
+      const message = await api
+        .get(`/api/marazam/messages/${testData.messages[0].public_id}`)
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect('Content-Type', /application\/json/);
+      
+      assert.strictEqual(message.body.message, testData.messages[0].message);
+    });
   });
 
   describe('add some data to system (users, messages, chats etc)', () => {

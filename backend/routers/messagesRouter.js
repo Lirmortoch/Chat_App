@@ -21,7 +21,7 @@ import { validator } from '../validation/utils/middleware.js';
 import { uploadChatFile } from '../utils/multer.js';
 
 MessagesRouter.get('/', checkUserPrivileges('owner'), getAllMessages);
-MessagesRouter.get('/message/:message_public_id', getMessage);
+MessagesRouter.get('/:public_id', getMessage);
 MessagesRouter.get('/chat/:chat_public_id', checkChatAccess, getChatMsgs);
 
 MessagesRouter.post(

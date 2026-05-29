@@ -75,7 +75,7 @@ async function seed() {
     ];
     const messages = await postgreSql`
       INSERT INTO chat.messages ${postgreSql(messagesData, 'chat_id', 'sender_id', 'message')}
-      RETURNING id
+      RETURNING id, public_id, message
     `;
 
     info('🔑 creating active session..');
