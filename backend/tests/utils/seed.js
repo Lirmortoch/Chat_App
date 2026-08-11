@@ -84,6 +84,10 @@ async function seed() {
       INSERT INTO chat.messages ${postgreSql(messagesData, 'chat_id', 'sender_id', 'message')}
       RETURNING id, public_id, message
     `;
+    
+    info('Creating contacts...');
+    const contactPhotos = await postgreSql``;
+    const contacts = await postgreSql``;
 
     info('🔑 creating active session..');
     const [session] = await postgreSql`
@@ -108,7 +112,8 @@ async function seed() {
       chats,
       messages,
       userPhotos,
-      session
+      session,
+      contacts,
     };
   } catch (err) {
     error('❌ Seeding error:', err);

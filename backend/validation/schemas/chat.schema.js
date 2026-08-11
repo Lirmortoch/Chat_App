@@ -21,6 +21,8 @@ const chatSchema = Joi.object({
 
   delete_reason: Joi.string().max(125),
   restrict_reason: Joi.string().max(125),
+
+  last_read_at: Joi.bool(),
 });
 
 export default chatSchema;

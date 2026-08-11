@@ -266,6 +266,24 @@ const updateChatMembers = async (fieldsData, cols, user_id, chat_id) => {
     return err;
   }
 };
+const readMessages = async (user_id, chat_id) => {
+  try {
+    const [updatedRead] = await postgreSql`
+      UPDATE chat.chats_members
+      SET last_read_at = now()
+      WHERE chat_id = ${chat_id} 
+        AND user_id = ${user_id}
+        AND last_read_at < now()
+      RETURNING last_read_at
+    `;
+
+    return updatedRead;
+  }
+  catch (err) {
+    error(`Error: ${err}`);
+    return err;
+  }
+};
 
 const addNewUserToChat = async (user_public_id, chat_id, chat_public_id) => {
   try {
@@ -361,6 +379,7 @@ export {
 
   updateChat,
   updateChatMembers,
+  readMessages,
 
   deleteChat,
 };

@@ -10,6 +10,7 @@ import {
   deleteChat,
   addNewUserToChat,
   deleteUserFromChat,
+  updatedReadMessages,
 } from '../controllers/chatsController.js';
 
 import chatSchema from '../validation/schemas/chat.schema.js';
@@ -64,6 +65,13 @@ ChatsRouter.put(
   fieldWhiteList(adminList),
   validator(chatSchema),
   updateChatAccess,
+);
+ChatsRouter.put(
+  '/chat/read/:public_id',
+  checkChatAccess('user'),
+  fieldWhiteList(userList),
+  validator(chatSchema),
+  updatedReadMessages
 );
 
 ChatsRouter.post(

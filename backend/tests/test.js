@@ -26,6 +26,7 @@ describe('test backend', () => {
       messages: data.messages,
       photos: data.photos,
       userPhotos: data.userPhotos,
+      contacts: data.contacts,
     };
   });
 

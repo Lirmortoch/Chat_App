@@ -10,6 +10,7 @@ import {
   deleteChat as _deleteChat,
   addNewUserToChat as _addNewUserToChat,
   deleteUserFromChat as _deleteUserFromChat,
+  readMessages as _readMessages,
 } from '../services/chatsService.js';
 
 const getAllChats = async (request, response) => {
@@ -37,14 +38,14 @@ const getUserChats = async (request, response) => {
 
 const createNewChat = async (request, response) => {
   try {
-    const { recipient_public_id, type, name, avatar } = request.body.fieldsData;
+    const { recipient_public_id, type, name, avatar, url } = request.body.fieldsData;
     const creator_id = request.user.id;
 
     if (!type || !name) {
       return response.status(400).json({ message: 'Missing required field' });
     }
 
-    const chatUrl = nanoid(35);
+    const chatUrl = url !== undefined ? url : nanoid(35);
 
     const insertedChat = await insertChat(
       recipient_public_id,
@@ -131,6 +132,18 @@ const updateChatAccess = async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 };
+const updatedReadMessages = async (request, response) => {
+  try {
+    const chat_id = request.chatInternalId;
+    const user_id = request.user.id;
+
+    const newRead = await _readMessages(user_id, chat_id);
+    response.status(201).json(newRead);
+  } catch (err) {
+    error(err);
+    response.status(500).json({ message: 'Internal server error' });
+  }
+}
 
 const deleteChat = async (request, response) => {
   try {
@@ -156,6 +169,7 @@ export {
 
   updateChat,
   updateChatAccess,
+  updatedReadMessages,
 
   deleteChat,
 };

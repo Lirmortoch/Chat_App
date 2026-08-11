@@ -53,7 +53,7 @@ const addNewMessage = async (request, response) => {
     const sender_id = request.user.id;
 
     if (message === undefined || (message === '' && additionals.length === 0)) {
-      return response.status(400).json({ message: 'Missing required field' });
+      return response.status(400).json({ message: 'Add text or files to messages' });
     }
 
     const insertedMessage = await insertMsg(message, additionals, chat_id, sender_id);

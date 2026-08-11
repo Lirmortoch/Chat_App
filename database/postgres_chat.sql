@@ -137,7 +137,6 @@ CREATE TABLE chat.messages (
 	created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	edited_at timestamptz NULL,
 	public_id uuid DEFAULT uuidv7() NOT NULL,
-	CONSTRAINT message_text_not_empty CHECK (((message IS NULL) OR (length(TRIM(BOTH FROM message)) > 0))),
 	CONSTRAINT messages_pk PRIMARY KEY (id),
 	CONSTRAINT messages_unique UNIQUE (public_id),
 	CONSTRAINT messages_chat_fk FOREIGN KEY (chat_id) REFERENCES chat.chats(id) ON DELETE CASCADE,
