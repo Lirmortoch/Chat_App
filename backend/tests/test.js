@@ -3,6 +3,9 @@ import assert from 'node:assert';
 import { test, after, beforeEach, describe, before } from 'node:test';
 import supertest from 'supertest';
 import bcrypt from 'bcrypt';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import app from '../app.js';
 import { info } from '../utils/logger.js';
@@ -10,6 +13,9 @@ import seed from './utils/seed.js';
 import postgreSql from '../db.js';
 
 const api = supertest(app);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 describe('test backend', () => {
   let session = null;
@@ -95,6 +101,11 @@ describe('test backend', () => {
     test('add user to system without photo', async () => {
       const username = 'lirmortoch';
 
+      const initialUsersResponse = await api
+        .get('/api/marazam/users')
+        .set('Cookie', [`identifier=${session.identifier}`]);
+      const initialCount = initialUsersResponse.body.length;
+
       const response = await api
         .post('/api/marazam/users/signup')
         .field('username', username)
@@ -108,11 +119,76 @@ describe('test backend', () => {
       .set('Cookie', [
         `identifier=${session.identifier}`
       ]);
+      const newUser = await api
+      .get(`/api/marazam/users/${response.body.usersData.public_id}`)
+      .set('Cookie', [
+        `identifier=${session.identifier}`
+      ]);
  
-      assert.strictEqual(usersAtTheEnd.body.length, testData.users.length + 1);
+      assert.strictEqual(usersAtTheEnd.body.length, initialCount + 1);
+      assert.strictEqual(newUser.body.username, username);
+    });
+    test('add user to system with photo', async () => {
+      const username = 'lirmortoch2';
 
-      // const usernames = usersAtTheEnd.body.map(u => u.username);
-      // assert(usernames.includes(username));
+      const initialUsersResponse = await api
+        .get('/api/marazam/users')
+        .set('Cookie', [`identifier=${session.identifier}`]);
+      const initialCount = initialUsersResponse.body.length;
+
+      const imagePath = path.resolve(__dirname, 'public/imgs/user1.png');
+
+      const response = await api
+        .post('/api/marazam/users/signup')
+        .field('username', username)
+        .field('email', 'email1232@gmail.com')
+        .field('first_name', 'Roberto2')
+        .field('password', '542fda321CBZX@')
+        .attach('avatar', imagePath)
+        .expect(201);
+
+      const usersAtTheEnd = await api
+      .get('/api/marazam/users')
+      .set('Cookie', [
+        `identifier=${session.identifier}`
+      ]);
+
+      const newUser = await api
+      .get(`/api/marazam/users/${response.body.usersData.public_id}`)
+      .set('Cookie', [
+        `identifier=${session.identifier}`
+      ]);
+    
+      assert.strictEqual(usersAtTheEnd.body.length, initialCount + 1);
+      assert.strictEqual(newUser.body.username, username);
+      assert.ok(newUser.body.avatar, 'avatar exist');
+    });
+    test('user with wrong data can not be added to system', async () => {
+      const username = 'li';
+
+      const initialUsersResponse = await api
+        .get('/api/marazam/users')
+        .set('Cookie', [`identifier=${session.identifier}`]);
+      const initialCount = initialUsersResponse.body.length;
+
+      const imagePath = path.resolve(__dirname, 'public/imgs/user1.png');
+
+      const response = await api
+        .post('/api/marazam/users/signup')
+        .field('username', username)
+        .field('email', 'email12.com')
+        .field('first_name', 'R')
+        .field('password', '54')
+        .attach('avatar', imagePath)
+        .expect(500);
+
+      const usersAtTheEnd = await api
+      .get('/api/marazam/users')
+      .set('Cookie', [
+        `identifier=${session.identifier}`
+      ]);
+    
+      assert.strictEqual(usersAtTheEnd.body.length, initialCount);
     });
   });
 });
