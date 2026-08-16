@@ -3,6 +3,7 @@ const ChatsRouter = express.Router();
 
 import {
   getAllChats,
+  getChat,
   getUserChats,
   createNewChat,
   updateChat,
@@ -27,21 +28,8 @@ import { validator } from '../validation/utils/middleware.js';
 import { uploadAvatar } from '../utils/multer.js';
 
 ChatsRouter.get('/', checkUserPrivileges('owner'), getAllChats);
-// ChatsRouter.get('/chat/:public_id', checkChatAccess(), async (request, response) => {
-//   try {
-//     const chat_id = request.chatInternalId;
-//     const user_id = request.user.id;
-
-//     if (!chat) {
-//       return response.status(404).json({ message: 'Message not found' });
-//     }
-
-//     response.json(chat);
-//   } catch (error) {
-//     console.log(error);
-//     response.status(500).json({ message: 'Internal server error' });
-//   }
-// });
+ChatsRouter.get('/private/:public_id', checkChatAccess(), getChat);
+ChatsRouter.get('/public/:public_id', getChat);
 ChatsRouter.get('/user/:public_id', checkChatAccess(), getUserChats);
 
 ChatsRouter.post(

@@ -36,7 +36,7 @@ const getChat = async (public_id) => {
             )
         ) AS members
     FROM chat.chats c
-    LEFT JOIN chat.photos cp ON c.photo_id = cp.photo_id
+    LEFT JOIN chat.photos cp ON c.photo_id = cp.id
     JOIN chat.chats_members cm ON c.id = cm.chat_id
     JOIN chat.users u ON cm.user_id = u.id
     LEFT JOIN LATERAL (

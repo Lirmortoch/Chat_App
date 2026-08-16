@@ -59,7 +59,7 @@ async function seed() {
     ];
     const chats = await postgreSql`
       INSERT INTO chat.chats ${postgreSql(chatsData, 'name', 'type', 'description', 'photo_id', 'url')}
-      RETURNING id
+      RETURNING id, public_id
     `;
 
     info('🤝 Adding chat participants...');
@@ -86,8 +86,24 @@ async function seed() {
     `;
     
     info('Creating contacts...');
-    const contactPhotos = await postgreSql``;
-    const contacts = await postgreSql``;
+    const contactsData = [
+      { owner_id: users[0].id, user_id: users[1].id, first_name: users[1].first_name ?? 'Анна', last_name: 'Смирнова', email: 'anna@example.com', phone_number: '+0987654321' },
+      { owner_id: users[1].id, user_id: users[0].id, first_name: 'Иван', last_name: 'Иванов', email: 'ivan@example.com', phone_number: '+1234567890' },
+    ];
+    const contacts = await postgreSql`
+      INSERT INTO chat.contacts ${postgreSql(contactsData, 'owner_id', 'user_id', 'first_name', 'last_name', 'email', 'phone_number')}
+      RETURNING id, public_id, owner_id, user_id
+    `;
+
+    info('🖼️ linking avatars to contacts...');
+    const contactAvatarsData = [
+      { contact_id: contacts[0].id, photo_id: photos[1].public_id, is_main: true },
+      { contact_id: contacts[1].id, photo_id: photos[0].public_id, is_main: true }, 
+    ];
+    const contactPhotos = await postgreSql`
+      INSERT INTO chat.contact_avatars ${postgreSql(contactAvatarsData, 'contact_id', 'photo_id', 'is_main')}
+      RETURNING id, contact_id, photo_id
+    `;
 
     info('🔑 creating active session..');
     const [session] = await postgreSql`
@@ -114,6 +130,7 @@ async function seed() {
       userPhotos,
       session,
       contacts,
+      contactPhotos,
     };
   } catch (err) {
     error('❌ Seeding error:', err);

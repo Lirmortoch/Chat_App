@@ -38,13 +38,40 @@ describe('test backend', () => {
 
   describe('when there is initially has some data saved', () => {
     test('users are returned as json', async () => {
-    await api
-      .get('/api/marazam/users')
-      .set('Cookie', [
-        `identifier=${session.identifier}`
-      ])
-      .expect(200)
-      .expect('Content-Type', /application\/json/);
+      await api
+        .get('/api/marazam/users')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect(200)
+        .expect('Content-Type', /application\/json/);
+    });
+    test('messages are returned as json', async () => {
+      await api
+        .get('/api/marazam/messages')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect(200)
+        .expect('Content-Type', /application\/json/);
+    });
+    test('chats are returned as json', async () => {
+      await api
+        .get('/api/marazam/chats')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect(200)
+        .expect('Content-Type', /application\/json/);
+    });
+    test('contacts are returned as json', async () => {
+      await api
+        .get('/api/marazam/contacts')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect(200)
+        .expect('Content-Type', /application\/json/);
     });
 
     test('all users returned', async () => {
@@ -74,6 +101,15 @@ describe('test backend', () => {
       
       assert.strictEqual(response.body.length, testData.chats.length);
     });
+    test('all contacts returned', async () => {
+      const response = await api
+        .get('/api/marazam/contacts')
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ]);
+      
+      assert.strictEqual(response.body.length, testData.chats.length);
+    });
 
     test('return one specific user', async () => {
       const user = await api
@@ -94,6 +130,26 @@ describe('test backend', () => {
         .expect('Content-Type', /application\/json/);
       
       assert.strictEqual(message.body.message, testData.messages[0].message);
+    });
+    test('return one specific public chat', async () => {
+      const chat = await api
+        .get(`/api/marazam/chats/public/${testData.chats[0].public_id}`)
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect('Content-Type', /application\/json/);
+      console.log(chat.body, '<--- here --->', testData.chats[0].public_id);
+      assert.strictEqual(chat.body.message, testData.chats[0].message);
+    });
+    test('return one specific contact', async () => {
+      const contact = await api
+        .get(`/api/marazam/contacts/${testData.contacts[0].public_id}`)
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect('Content-Type', /application\/json/);
+      
+      assert.strictEqual(contact.body.message, testData.contacts[0].message);
     });
   });
 
@@ -180,7 +236,7 @@ describe('test backend', () => {
         .field('first_name', 'R')
         .field('password', '54')
         .attach('avatar', imagePath)
-        .expect(500);
+        .expect(400);
 
       const usersAtTheEnd = await api
       .get('/api/marazam/users')
