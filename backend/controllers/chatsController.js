@@ -3,7 +3,8 @@ import { nanoid } from 'nanoid';
 import { error } from '../utils/logger.js';
 import {
   getAllChats as _getAllChats,
-  getChat as _getChat, 
+  getPrivateChat as _getPrivateChat,
+  getPublicChat as _getPublicChat,
   getChatsByUser,
   insertChat,
   updateChat as _updateChat,
@@ -24,9 +25,23 @@ const getAllChats = async (request, response) => {
     response.status(500).json({ message: 'Internal server error' });
   }
 };
-const getChat = async (request, response) => {
+const getPrivateChat = async (request, response) => {
   try {
-    const chat = await _getChat(request.params.public_id);
+    const chat = await _getPrivateChat(request.params.public_id);
+
+    if (!chat) {
+      return response.status(404).json({ message: 'Chat not found' });
+    }
+
+    response.json(chat);
+  } catch (err) {
+    error(err);
+    response.status(500).json({ message: 'Internal server error' });
+  }
+};
+const getPublicChat = async (request, response) => {
+  try {
+    const chat = await _getPublicChat(request.params.public_id);
 
     if (!chat) {
       return response.status(404).json({ message: 'Chat not found' });
@@ -175,7 +190,8 @@ const deleteChat = async (request, response) => {
 
 export {
   getAllChats,
-  getChat,
+  getPrivateChat,
+  getPublicChat,
   getUserChats,
 
   createNewChat,

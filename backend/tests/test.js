@@ -131,15 +131,25 @@ describe('test backend', () => {
       
       assert.strictEqual(message.body.message, testData.messages[0].message);
     });
-    test('return one specific public chat', async () => {
+    test('return one specific private chat', async () => {
       const chat = await api
-        .get(`/api/marazam/chats/public/${testData.chats[0].public_id}`)
+        .get(`/api/marazam/chats/private/${testData.chats[0].public_id}`)
         .set('Cookie', [
           `identifier=${session.identifier}`
         ])
         .expect('Content-Type', /application\/json/);
-      console.log(chat.body, '<--- here --->', testData.chats[0].public_id);
-      assert.strictEqual(chat.body.message, testData.chats[0].message);
+   
+      assert.strictEqual(chat.body.public_id, testData.chats[0].public_id);
+    });
+    test('return one specific public chat', async () => {
+      const chat = await api
+        .get(`/api/marazam/chats/public/${testData.chats[1].public_id}`)
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect('Content-Type', /application\/json/);
+
+      assert.strictEqual(chat.body.public_id, testData.chats[1].public_id);
     });
     test('return one specific contact', async () => {
       const contact = await api
@@ -149,8 +159,10 @@ describe('test backend', () => {
         ])
         .expect('Content-Type', /application\/json/);
       
-      assert.strictEqual(contact.body.message, testData.contacts[0].message);
+      assert.strictEqual(contact.body.public_id, testData.contacts[0].public_id);
     });
+
+    
   });
 
   describe('add some data to system (users, messages, chats etc)', () => {

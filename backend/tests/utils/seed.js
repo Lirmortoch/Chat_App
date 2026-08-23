@@ -55,7 +55,7 @@ async function seed() {
 
     const chatsData = [
       { name: 'Private chat', type: 'private-chat', description: '', photo_id: null, url: chatUrl1 }, // without photo
-      { name: 'Work group', type: 'private-group', description: 'Обсуждение проекта', photo_id: photos[2].id, url: chatUrl2 }
+      { name: 'Work group', type: 'public-group', description: 'Обсуждение проекта', photo_id: photos[2].id, url: chatUrl2 }
     ];
     const chats = await postgreSql`
       INSERT INTO chat.chats ${postgreSql(chatsData, 'name', 'type', 'description', 'photo_id', 'url')}

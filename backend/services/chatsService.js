@@ -15,12 +15,12 @@ const getAllChats = async () => {
     return err;
   }
 };
-const getChat = async (public_id) => {
+const getPublicChat = async (public_id) => {
   try {
     const [chat] = await postgreSql`
       SELECT 
         c.id,
-        c.public_id AS chat_public_id,
+        c.public_id,
         c.name,
         c.type,
         c.description,
@@ -46,7 +46,50 @@ const getChat = async (public_id) => {
         WHERE upp.user_id = u.id AND upp.is_main = true
         LIMIT 1
     ) up ON true
-    WHERE c.public_id = ${public_id}
+    WHERE c.public_id = ${public_id} 
+      AND c.type IN ('public-channel', 'public-group')
+    GROUP BY c.id, cp.file_url;
+    `;
+
+    return chat;
+  } catch (err) {
+    error(`Error: ${err}`);
+    return err;
+  }
+};
+const getPrivateChat = async (public_id) => {
+  try {
+    const [chat] = await postgreSql`
+      SELECT 
+        c.id,
+        c.public_id,
+        c.name,
+        c.type,
+        c.description,
+        cp.file_url AS chat_avatar_url,
+        json_agg(
+            json_build_object(
+                'public_id', u.public_id,
+                'first_name', u.first_name,
+                'last_name', u.last_name,
+                'username', u.username,
+                'role', cm.role,
+                'avatar_url', up.file_url
+            )
+        ) AS members
+    FROM chat.chats c
+    LEFT JOIN chat.photos cp ON c.photo_id = cp.id
+    JOIN chat.chats_members cm ON c.id = cm.chat_id
+    JOIN chat.users u ON cm.user_id = u.id
+    LEFT JOIN LATERAL (
+        SELECT p.file_url 
+        FROM chat.user_profile_photos upp
+        JOIN chat.photos p ON upp.photo_id = p.public_id
+        WHERE upp.user_id = u.id AND upp.is_main = true
+        LIMIT 1
+    ) up ON true
+    WHERE c.public_id = ${public_id} 
+      AND c.type IN ('private-chat', 'private-channel', 'private-group')
     GROUP BY c.id, cp.file_url;
     `;
 
@@ -369,7 +412,8 @@ const deleteChat = async (chat_id) => {
 
 export {
   getAllChats,
-  getChat,
+  getPrivateChat,
+  getPublicChat,
   getChatsByUser,
 
   insertChat,
