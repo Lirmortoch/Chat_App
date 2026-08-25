@@ -103,22 +103,22 @@ const getChatsByUser = async (user_id) => {
   try {
     const chats = await postgreSql`
     SELECT DISTINCT ON (c.id)
-      c.public_id AS chat_id,
+      c.public_id AS chat_public_id,
       c.type AS chat_type,
       cm.last_read_at,
     
       CASE 
-          WHEN c.type = 'private' THEN u_other.first_name || ' ' || u_other.last_name
+          WHEN c.type = 'private-chat' THEN u_other.first_name || ' ' || u_other.last_name
           ELSE c.name 
       END AS display_name,
 
       COALESCE(
-          CASE WHEN c.type = 'private' THEN 
+          CASE WHEN c.type = 'private-chat' THEN 
               (SELECT ph.file_url FROM chat.contact_avatars cav 
               JOIN chat.photos ph ON cav.photo_id = ph.public_id 
               WHERE cav.contact_id = con.id AND cav.is_main = true)
           END,
-          CASE WHEN c.type = 'private' THEN 
+          CASE WHEN c.type = 'private-chat' THEN 
               (SELECT ph.file_url FROM chat.user_profile_photos upp 
               JOIN chat.photos ph ON upp.photo_id = ph.public_id 
               WHERE upp.user_id = u_other.id AND upp.is_main = true)
@@ -145,7 +145,7 @@ const getChatsByUser = async (user_id) => {
       FROM chat.chats_members cm
       JOIN chat.chats c ON cm.chat_id = c.id
 
-      LEFT JOIN chat.chats_members cm_other ON (c.type = 'private' AND cm_other.chat_id = c.id AND cm_other.user_id != ${user_id})
+      LEFT JOIN chat.chats_members cm_other ON (c.type = 'private-chat' AND cm_other.chat_id = c.id AND cm_other.user_id != ${user_id})
       LEFT JOIN chat.users u_other ON cm_other.user_id = u_other.id
 
       LEFT JOIN chat.contacts con ON (con.owner_id = ${user_id} AND con.user_id = u_other.id)
@@ -183,13 +183,13 @@ const insertChat = async (recipient_public_id, type, name, avatar, creator_id, c
       `;
       if (!recipient) throw new Error('User not found');
 
-      if (type === 'private') {
+      if (type === 'private-chat') {
         const [existingChat] = await sql`
           SELECT c.public_id, c.name, c.type
           FROM chat.chats c
           JOIN chat.chats_members cm1 ON c.id = cm1.chat_id
           JOIN chat.chats_members cm2 ON c.id = cm2.chat_id
-          WHERE c.type = 'private'
+          WHERE c.type = 'private-chat'
             AND cm1.user_id = ${creator_id}
             AND cm2.user_id = ${recipient.id}
           LIMIT 1
@@ -198,7 +198,7 @@ const insertChat = async (recipient_public_id, type, name, avatar, creator_id, c
       }
 
       let createdPhotoId = null;
-      if (type !== 'private' && avatar && fieldObjectChecking(avatar)) {
+      if (type !== 'private-chat' && avatar && fieldObjectChecking(avatar)) {
         const [photo] = await sql`
           INSERT INTO chat.photos (file_url, file_type, file_name, width, height)
           VALUES (${avatar.file_url}, ${avatar.file_type}, ${avatar.file_name}, ${avatar.width}, ${avatar.height})
@@ -225,7 +225,7 @@ const insertChat = async (recipient_public_id, type, name, avatar, creator_id, c
       `;
 
       let avatarResult = null;
-      if (type === 'private') {
+      if (type === 'private-chat') {
         [avatarResult] = await sql`
           SELECT ph.file_url, ph.file_type
           FROM chat.contacts con

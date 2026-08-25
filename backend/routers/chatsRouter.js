@@ -31,7 +31,7 @@ import { uploadAvatar } from '../utils/multer.js';
 ChatsRouter.get('/', checkUserPrivileges('owner'), getAllChats);
 ChatsRouter.get('/private/:public_id', checkChatAccess(), getPrivateChat);
 ChatsRouter.get('/public/:public_id', getPublicChat);
-ChatsRouter.get('/user/:public_id', checkChatAccess(), getUserChats);
+ChatsRouter.get('/user/:public_id', getUserChats);
 
 ChatsRouter.post(
   '/',

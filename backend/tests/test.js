@@ -162,7 +162,14 @@ describe('test backend', () => {
       assert.strictEqual(contact.body.public_id, testData.contacts[0].public_id);
     });
 
-    
+    test('return all chats for one user', async () => {
+      const chats = await api
+        .get(`/api/marazam/chats/user/${testData.users[0].public_id}`)
+        .set('Cookie', [
+          `identifier=${session.identifier}`
+        ])
+        .expect('Content-Type', /application\/json/);
+    });
   });
 
   describe('add some data to system (users, messages, chats etc)', () => {
